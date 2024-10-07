@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog Post Title - Collin D. Cortez</title>
+    <title>Blog - Collin D. Cortez</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -56,13 +56,31 @@
             margin: 0 auto;
             padding: 20px;
         }
-        .post-meta {
-            color: #777;
-            margin-bottom: 1rem;
+        .blog-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
         }
-        img {
-            max-width: 100%;
-            height: auto;
+        .blog-post {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .blog-post img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        .blog-post-content {
+            padding: 10px;
+        }
+        .blog-post h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+        }
+        .blog-post-meta {
+            font-size: 0.8em;
+            color: #777;
         }
         footer {
             background-color: #333;
@@ -93,32 +111,36 @@
         </nav>
     </header>
     <main>
-        <article>
-            <h1>My Blog Post Title</h1>
-            <div class="post-meta">
-                <span>By Collin D. Cortez</span> | 
-                <time datetime="2024-10-05">October 5, 2024</time>
-            </div>
-            <img src="/api/placeholder/800/400" alt="Blog post featured image">
-            <p>This is the introduction paragraph of your blog post. It should give readers an idea of what the post is about and encourage them to keep reading.</p>
-            <h2>First Subheading</h2>
-            <p>This is the first main point of your blog post. Expand on your ideas and provide relevant information to your readers.</p>
-            <h2>Second Subheading</h2>
-            <p>Continue with your second main point. You can include lists if needed:</p>
-            <ul>
-                <li>First item</li>
-                <li>Second item</li>
-                <li>Third item</li>
-            </ul>
-            <h2>Conclusion</h2>
-            <p>Summarize your main points and provide a concluding thought or call to action for your readers.</p>
-        </article>
+        <h1>Blog Posts</h1>
+        <div class="blog-list">
+            <!-- Example blog post entries -->
+            <article class="blog-post">
+                <a href="blog-post-1.html">
+                    <img src="/api/placeholder/300/150" alt="Blog post 1 thumbnail">
+                    <div class="blog-post-content">
+                        <h2>Blog Post Title 1</h2>
+                        <div class="blog-post-meta">
+                            <time datetime="2024-10-07">October 7, 2024</time>
+                        </div>
+                    </div>
+                </a>
+            </article>
+            <article class="blog-post">
+                <a href="blog-post-2.html">
+                    <img src="/api/placeholder/300/150" alt="Blog post 2 thumbnail">
+                    <div class="blog-post-content">
+                        <h2>Blog Post Title 2</h2>
+                        <div class="blog-post-meta">
+                            <time datetime="2024-10-05">October 5, 2024</time>
+                        </div>
+                    </div>
+                </a>
+            </article>
+            <!-- Add more blog post entries as needed -->
+        </div>
     </main>
     <footer>
         <p>&copy; 2024 Collin D. Cortez. All rights reserved.</p>
-    </footer>
-</body>
-</html>
     </footer>
 </body>
 </html>
