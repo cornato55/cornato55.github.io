@@ -44,7 +44,7 @@
             color: #64b5f6;
         }
         main {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 40px auto;
             padding: 0 20px;
         }
@@ -54,8 +54,13 @@
             margin-bottom: 30px;
         }
         a {
+            color: #64b5f6;
             text-decoration: none;
-            color: inherit;
+            transition: color 0.3s ease;
+        }
+        a:hover {
+            color: #42a5f5;
+            text-decoration: underline;
         }
         footer {
             background-color: #1f1f1f;
@@ -75,7 +80,26 @@
         .footer-links a:hover {
             text-decoration: underline;
         }
-    </style>
+        .resume-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
+        }
+        .download-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #64b5f6;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .download-link:hover {
+            background-color: #42a5f5;
+            text-decoration: none;
         }
     </style>
 </head>
@@ -91,12 +115,19 @@
         </nav>
     </header>
     <main>
-        <h1>My Resume:</h1>
-        <img src="Collin Cortez Resume 2023.jpg" alt="Resume"> 
-        <p> </p>
-        <p> You can also download my resume by clicking the link below:</p>
-        <a href="Collin Cortez Resume 2023.pdf" download>Download Resume</a>
-        <p> Thanks for looking! </p>
+        <h1>My Resume</h1>
+        <img src="Collin Cortez Resume 2023.jpg" alt="Collin D. Cortez Resume" class="resume-image">
+        <p>You can also download my resume as a PDF by clicking the link below:</p>
+        <a href="Collin Cortez Resume 2023.pdf" download class="download-link">Download Resume (PDF)</a>
+        <p>Thank you for your interest in my professional background!</p>
     </main>
+    <footer>
+        <div class="footer-links">
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="terms-of-service.html">Terms of Service</a>
+            <a href="contact.html">Contact</a>
+        </div>
+        <p>&copy; 2024 Collin D. Cortez. All rights reserved.</p>
+    </footer>
 </body>
 </html>
