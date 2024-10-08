@@ -4,53 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Me - Collin D. Cortez</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
             margin: 0;
             padding: 0;
+            background-color: #121212;
         }
         header {
-            background-color: #333;
+            background-color: #1f1f1f;
             color: white;
-            padding: 20px;
+            padding: 1rem 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         nav {
-            display: inline-block;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
         nav ul {
             list-style-type: none;
-            margin: 0;
             padding: 0;
+            margin: 0;
+            display: flex;
         }
         nav li {
-            display: inline-block;
             margin-right: 20px;
-            position: relative;
         }
         nav a {
             color: white;
             text-decoration: none;
+            font-weight: 300;
+            transition: color 0.3s ease;
         }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #f9f9f9;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-        }
-        .dropdown-content a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-        }
-        .dropdown:hover .dropdown-content {
-            display: block;
+        nav a:hover {
+            color: #64b5f6;
         }
         main {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #ffffff;
+            margin-bottom: 30px;
+        }
+        p {
+            margin-bottom: 20px;
+        }
+        footer {
+            background-color: #1f1f1f;
+            color: #bdbdbd;
+            text-align: center;
             padding: 20px;
+            margin-top: 40px;
+        }
+        .footer-links {
+            margin-bottom: 10px;
+        }
+        .footer-links a {
+            color: #64b5f6;
+            margin: 0 10px;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -58,22 +80,28 @@
     <header>
         <nav>
             <ul>
-                <li class="dropdown">
-                    <a href="#">Menu</a>
-                    <div class="dropdown-content">
-                        <a href="index.html">Home</a>
-                        <a href="about.html">About Me</a>
-                        <a href="resume.html">Resume</a>
-                        <a href="projects.html">Projects</a>
-                        <a href="blog.html">Blog</a>
-                    </div>
-                </li>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Me</a></li>
+                <li><a href="resume.html">Resume</a></li>
+                <li><a href="projects.html">Projects</a></li>
+                <li><a href="blog.html">Blog</a></li>
             </ul>
         </nav>
     </header>
     <main>
         <h1>About Me</h1>
-        <p>Add your bio and personal information here.</p>
+        <p>Hello! I'm Collin D. Cortez, I like to make things. This website is my foray into webdesign and development. With a background in electronics and automation, I wanted a place to share my projects and ideas.</p>
+        <p>This is very much a work in progress and to be honest Claude is writing most of the code, I'm still learning.Ihope to post some projects and blogs soon. </p>
+        <p>When I'm not working on projects or writing code, I try to get outside and enjoy nature. I believe in constant growth and change and consider myself a permanent student.</p>
+        <p>Feel free to explore my projects and blog posts to get a better sense of my work and thought process. If you'd like to collaborate or just chat about web development, don't hesitate to reach out!</p>
     </main>
+    <footer>
+        <div class="footer-links">
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="terms-of-service.html">Terms of Service</a>
+            <a href="contact.html">Contact</a>
+        </div>
+        <p>&copy; 2024 Collin D. Cortez. All rights reserved.</p>
+    </footer>
 </body>
 </html>
