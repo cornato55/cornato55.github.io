@@ -9,6 +9,17 @@ let previewLine = null;
 let angles = {};
 let uploadedImage = null;
 
+let adjustments = {
+  neck: { twisted: false, sideBending: false },
+  trunk: { twisted: false, sideBending: false },
+  legs: { raised: false },
+  arms: { shoulderRaised: false, abducted: false, supported: false },
+  wrist: { twisted: false },
+  force: { level: 0, shock: false },
+  coupling: { quality: 0 },
+  activity: { staticPosture: false, repeatedActions: false, rapidChanges: false }
+};
+
 function calculateAngle(point1, point2, toolType) {
     // Calculate vector for this line
     const vector = {
@@ -193,52 +204,279 @@ function drawPreview(e) {
 }
 
 function stopDrawing(e) {
-    if (!isDrawing || !currentTool) return;
-    
-    // Get canvas coordinates
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    
-    // Add ending point
-    points.push({x, y});
-    
-    // Save the line
-    const toolType = currentTool.replace('draw-', '');
-    lines[toolType] = points.slice();
-    
-    // Calculate angle for this line
-    const angle = calculateAngle(points[0], points[1], toolType);
-    angles[toolType] = angle;
-    
-    // Draw final line
-    redrawCanvas();
-    drawLine(points[0], points[1], toolType);
-    
-    // Draw angle text
-    const midX = (points[0].x + points[1].x) / 2;
-    const midY = (points[0].y + points[1].y) / 2;
-    ctx.fillStyle = 'white';
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 3;
-    ctx.font = '14px Arial';
-    ctx.strokeText(`${angle.toFixed(1)}°`, midX + 10, midY);
-    ctx.fillText(`${angle.toFixed(1)}°`, midX + 10, midY);
-    
-    // Reset drawing state
-    isDrawing = false;
-    points = [];
-    
-    // Enable undo button
-    document.getElementById('undo-last').disabled = false;
-    
-    // Update checkpoints
-    updateCheckpointForTool(toolType);
-    
-    // Auto-advance to next tool
+  if (!isDrawing || !currentTool) return;
+  
+  // Get canvas coordinates
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  
+  // Add ending point
+  points.push({x, y});
+  
+  // Save the line
+  const toolType = currentTool.replace('draw-', '');
+  lines[toolType] = points.slice();
+  
+  // Calculate angle for this line
+  const angle = calculateAngle(points[0], points[1], toolType);
+  angles[toolType] = angle;
+  
+  // Draw final line
+  redrawCanvas();
+  drawLine(points[0], points[1], toolType);
+  
+  // Draw angle text
+  const midX = (points[0].x + points[1].x) / 2;
+  const midY = (points[0].y + points[1].y) / 2;
+  ctx.fillStyle = 'white';
+  ctx.strokeStyle = 'black';
+  ctx.lineWidth = 3;
+  ctx.font = '14px Arial';
+  ctx.strokeText(`${angle.toFixed(1)}°`, midX + 10, midY);
+  ctx.fillText(`${angle.toFixed(1)}°`, midX + 10, midY);
+  
+  // Reset drawing state
+  isDrawing = false;
+  points = [];
+  
+  // Enable undo button
+  document.getElementById('undo-last').disabled = false;
+  
+  // Update checkpoints
+  updateCheckpointForTool(toolType);
+  
+  // Show adjustment popup instead of auto-advancing
+  showAdjustmentPopup(toolType);
+}
+
+// Create a function to show the adjustment popup
+function showAdjustmentPopup(toolType) {
+  // Create a popup overlay
+  const popup = document.createElement('div');
+  popup.className = 'adjustment-popup';
+  popup.style.position = 'absolute';
+  popup.style.top = '50%';
+  popup.style.left = '50%';
+  popup.style.transform = 'translate(-50%, -50%)';
+  popup.style.backgroundColor = 'white';
+  popup.style.padding = '20px';
+  popup.style.borderRadius = '10px';
+  popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.3)';
+  popup.style.zIndex = '1000';
+  popup.style.maxWidth = '400px';
+  popup.style.width = '90%';
+
+  // Create popup content based on the tool type
+  let content = '';
+  let controls = '';
+
+  switch (toolType) {
+    case 'neck':
+      content = `<h3>Neck Adjustments</h3>
+                <p>Please select any additional factors for the neck position:</p>`;
+      controls = `
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-neck-twisted" />
+          <label for="popup-neck-twisted">Neck is twisted</label>
+        </div>
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-neck-side-bending" />
+          <label for="popup-neck-side-bending">Neck is side bending</label>
+        </div>`;
+      break;
+    case 'trunk':
+      content = `<h3>Trunk Adjustments</h3>
+                <p>Please select any additional factors for the trunk position:</p>`;
+      controls = `
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-trunk-twisted" />
+          <label for="popup-trunk-twisted">Trunk is twisted</label>
+        </div>
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-trunk-side-bending" />
+          <label for="popup-trunk-side-bending">Trunk is side bending</label>
+        </div>`;
+      break;
+    case 'upper-leg':
+      content = `<h3>Legs Adjustments</h3>
+                <p>Please select any additional factors for the leg position:</p>`;
+      controls = `
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-leg-raised" />
+          <label for="popup-leg-raised">Leg is raised / weight on one side</label>
+        </div>`;
+      break;
+    case 'upper-arm':
+      content = `<h3>Upper Arm Adjustments</h3>
+                <p>Please select any additional factors for the arm position:</p>`;
+      controls = `
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-shoulder-raised" />
+          <label for="popup-shoulder-raised">Shoulder is raised</label>
+        </div>
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-arm-abducted" />
+          <label for="popup-arm-abducted">Arm is abducted</label>
+        </div>
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-arm-supported" />
+          <label for="popup-arm-supported">Arm is supported / person leaning</label>
+        </div>`;
+      break;
+    case 'wrist':
+      content = `<h3>Wrist Adjustments</h3>
+                <p>Please select any additional factors for the wrist position:</p>`;
+      controls = `
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-wrist-twisted" />
+          <label for="popup-wrist-twisted">Wrist is twisted / deviated</label>
+        </div>`;
+      break;
+    case 'lower-leg':
+      // Show force and coupling adjustments when lower leg is completed
+      content = `<h3>Force and Coupling</h3>
+                <p>Please select the appropriate force/load and coupling quality:</p>`;
+      controls = `
+        <div class="adjustment-control">
+          <label for="popup-force-load">Force/Load:</label>
+          <select id="popup-force-load">
+            <option value="0">< 5 kg (light)</option>
+            <option value="1">5-10 kg (medium)</option>
+            <option value="2">> 10 kg (heavy)</option>
+          </select>
+        </div>
+        <div class="adjustment-control">
+          <input type="checkbox" id="popup-shock-force" />
+          <label for="popup-shock-force">Sudden or jerky forces</label>
+        </div>
+        <div class="adjustment-control">
+          <label for="popup-coupling">Coupling/Grip:</label>
+          <select id="popup-coupling">
+            <option value="0">Good (well-fitted handles)</option>
+            <option value="1">Fair (acceptable but not ideal)</option>
+            <option value="2">Poor (not acceptable)</option>
+            <option value="3">Unacceptable (unsafe, no handles)</option>
+          </select>
+        </div>`;
+      break;
+    case 'lower-arm':
+    case 'reference':
+      // Skip adjustments for these
+      advanceToNextTool(toolType);
+      return;
+    default:
+      if (toolType === 'wrist' && Object.keys(lines).length >= 7) {
+        // Final activity adjustments after all measurements are done
+        content = `<h3>Activity Adjustments</h3>
+                  <p>Please select any additional activity factors:</p>`;
+        controls = `
+          <div class="adjustment-control">
+            <input type="checkbox" id="popup-static-posture" />
+            <label for="popup-static-posture">Static posture (held >1 minute)</label>
+          </div>
+          <div class="adjustment-control">
+            <input type="checkbox" id="popup-repeated-actions" />
+            <label for="popup-repeated-actions">Repeated actions (>4x per minute)</label>
+          </div>
+          <div class="adjustment-control">
+            <input type="checkbox" id="popup-rapid-changes" />
+            <label for="popup-rapid-changes">Rapid changes in posture</label>
+          </div>`;
+      } else {
+        // Skip and advance to next tool
+        advanceToNextTool(toolType);
+        return;
+      }
+  }
+
+  // Build the popup HTML
+  popup.innerHTML = `
+    ${content}
+    <form id="adjustment-form">
+      ${controls}
+      <div class="button-group" style="margin-top: 20px; text-align: right;">
+        <button type="button" id="popup-skip" style="margin-right: 10px; padding: 8px 16px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;">Skip</button>
+        <button type="button" id="popup-save" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">Save</button>
+      </div>
+    </form>
+  `;
+
+  // Add the popup to the body
+  document.body.appendChild(popup);
+
+  // Add an overlay to prevent clicking outside
+  const overlay = document.createElement('div');
+  overlay.className = 'popup-overlay';
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+  overlay.style.zIndex = '999';
+  document.body.appendChild(overlay);
+
+  // Add event listeners to the buttons
+  document.getElementById('popup-skip').addEventListener('click', function() {
+    closePopup();
     advanceToNextTool(toolType);
+  });
+
+  document.getElementById('popup-save').addEventListener('click', function() {
+    saveAdjustments(toolType);
+    closePopup();
+    advanceToNextTool(toolType);
+  });
+
+  // Function to close the popup
+  function closePopup() {
+    document.body.removeChild(popup);
+    document.body.removeChild(overlay);
+  }
+
+  // Function to save the adjustments
+  function saveAdjustments(toolType) {
+    switch (toolType) {
+      case 'neck':
+        adjustments.neck.twisted = document.getElementById('popup-neck-twisted').checked;
+        adjustments.neck.sideBending = document.getElementById('popup-neck-side-bending').checked;
+        break;
+      case 'trunk':
+        adjustments.trunk.twisted = document.getElementById('popup-trunk-twisted').checked;
+        adjustments.trunk.sideBending = document.getElementById('popup-trunk-side-bending').checked;
+        break;
+      case 'upper-leg':
+        adjustments.legs.raised = document.getElementById('popup-leg-raised').checked;
+        break;
+      case 'upper-arm':
+        adjustments.arms.shoulderRaised = document.getElementById('popup-shoulder-raised').checked;
+        adjustments.arms.abducted = document.getElementById('popup-arm-abducted').checked;
+        adjustments.arms.supported = document.getElementById('popup-arm-supported').checked;
+        break;
+      case 'wrist':
+        adjustments.wrist.twisted = document.getElementById('popup-wrist-twisted').checked;
+        break;
+      case 'lower-leg':
+        adjustments.force.level = parseInt(document.getElementById('popup-force-load').value);
+        adjustments.force.shock = document.getElementById('popup-shock-force').checked;
+        adjustments.coupling.quality = parseInt(document.getElementById('popup-coupling').value);
+        break;
+      default:
+        if (toolType === 'wrist' && Object.keys(lines).length >= 7) {
+          adjustments.activity.staticPosture = document.getElementById('popup-static-posture').checked;
+          adjustments.activity.repeatedActions = document.getElementById('popup-repeated-actions').checked;
+          adjustments.activity.rapidChanges = document.getElementById('popup-rapid-changes').checked;
+          
+          // If this is the final adjustment, calculate the REBA score
+          if (Object.keys(lines).length >= 7) {
+            calculateREBA();
+          }
+        }
+    }
+  }
 }
 
 function updateCheckpoints(step) {
@@ -387,34 +625,46 @@ function resizeCanvas() {
 }
 
 function clearCanvas() {
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Reset drawing state
-    lines = {};
-    points = [];
-    angles = {};
-    
-    // Redraw the image if available
-    if (uploadedImage) {
-        ctx.drawImage(uploadedImage, 0, 0);
-    }
-    
-    // Reset checkpoints
-    document.querySelectorAll('.checkpoint-list li').forEach(li => {
-        li.classList.remove('complete');
-        li.classList.remove('available');
-    });
-    
-    // Make first step available again
-    document.querySelector('[data-step="upload"]').classList.add('available');
-    
-    // Reset UI
-    document.getElementById('instructions').textContent = 'Upload an image to begin the REBA assessment.';
-    document.getElementById('undo-last').disabled = true;
-    document.getElementById('calculate-btn').disabled = true;
-    document.getElementById('adjustments-form').style.display = 'none';
-    document.getElementById('results').style.display = 'none';
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Reset drawing state
+  lines = {};
+  points = [];
+  angles = {};
+  
+  // Reset adjustments
+  adjustments = {
+    neck: { twisted: false, sideBending: false },
+    trunk: { twisted: false, sideBending: false },
+    legs: { raised: false },
+    arms: { shoulderRaised: false, abducted: false, supported: false },
+    wrist: { twisted: false },
+    force: { level: 0, shock: false },
+    coupling: { quality: 0 },
+    activity: { staticPosture: false, repeatedActions: false, rapidChanges: false }
+  };
+  
+  // Redraw the image if available
+  if (uploadedImage) {
+    ctx.drawImage(uploadedImage, 0, 0);
+  }
+  
+  // Reset checkpoints
+  document.querySelectorAll('.checkpoint-list li').forEach(li => {
+    li.classList.remove('complete');
+    li.classList.remove('available');
+  });
+  
+  // Make first step available again
+  document.querySelector('[data-step="upload"]').classList.add('available');
+  
+  // Reset UI
+  document.getElementById('instructions').textContent = 'Upload an image to begin the REBA assessment.';
+  document.getElementById('undo-last').disabled = true;
+  document.getElementById('calculate-btn').disabled = true;
+  document.getElementById('adjustments-form').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
 }
 
 function undoLastLine() {
@@ -626,85 +876,85 @@ function updateInstructions(toolId) {
 
 // Calculate REBA score
 async function calculateREBA() {
-    try {
-        // Get angles from the drawn lines
-        const neckAngle = angles['neck'] || 0;
-        const trunkAngle = angles['trunk'] || 0;
-        const legsAngle = Math.abs(angles['lower-leg'] - angles['upper-leg']) || 0;
-        const upperArmAngle = angles['upper-arm'] || 0;
-        const lowerArmAngle = Math.abs(angles['lower-arm'] - angles['upper-arm']) || 0;
-        const wristAngle = Math.abs(angles['wrist'] - angles['lower-arm']) || 0;
-        
-        // Get adjustment values
-        const neckTwisted = document.getElementById('neck-twisted').checked;
-        const neckSideBending = document.getElementById('neck-side-bending').checked;
-        const trunkTwisted = document.getElementById('trunk-twisted').checked;
-        const trunkSideBending = document.getElementById('trunk-side-bending').checked;
-        const legRaised = document.getElementById('leg-raised').checked;
-        const shoulderRaised = document.getElementById('shoulder-raised').checked;
-        const armAbducted = document.getElementById('arm-abducted').checked;
-        const armSupported = document.getElementById('arm-supported').checked;
-        const wristTwisted = document.getElementById('wrist-twisted').checked;
-        const forceLevel = parseInt(document.getElementById('force-load').value);
-        const shock = document.getElementById('shock-force').checked;
-        const coupling = parseInt(document.getElementById('coupling').value);
-        const staticPosture = document.getElementById('static-posture').checked;
-        const repeatedActions = document.getElementById('repeated-actions').checked;
-        const rapidChanges = document.getElementById('rapid-changes').checked;
-        
-        // Calculate individual component scores using Python functions
-        const neckScore = await window.pyodide.runPythonAsync(`calculate_neck_score(${neckAngle}, ${neckTwisted}, ${neckSideBending})`);
-        const trunkScore = await window.pyodide.runPythonAsync(`calculate_trunk_score(${trunkAngle}, ${trunkTwisted}, ${trunkSideBending})`);
-        const legsScore = await window.pyodide.runPythonAsync(`calculate_legs_score(${legsAngle}, ${legRaised})`);
-        const upperArmScore = await window.pyodide.runPythonAsync(`calculate_upper_arm_score(${upperArmAngle}, ${shoulderRaised}, ${armAbducted}, ${armSupported})`);
-        const lowerArmScore = await window.pyodide.runPythonAsync(`calculate_lower_arm_score(${lowerArmAngle})`);
-        const wristScore = await window.pyodide.runPythonAsync(`calculate_wrist_score(${wristAngle}, ${wristTwisted})`);
-        const forceScore = await window.pyodide.runPythonAsync(`calculate_force_score(${forceLevel}, ${shock})`);
-        const couplingScore = await window.pyodide.runPythonAsync(`calculate_coupling_score(${coupling})`);
-        const activityScore = await window.pyodide.runPythonAsync(`calculate_activity_score(${staticPosture}, ${repeatedActions}, ${rapidChanges})`);
-        
-        // Create a dictionary of component scores to pass to the final calculation
-        const componentScores = {
-            'neck': neckScore,
-            'trunk': trunkScore,
-            'legs': legsScore,
-            'force': forceScore,
-            'upper_arm': upperArmScore,
-            'lower_arm': lowerArmScore,
-            'wrist': wristScore,
-            'coupling': couplingScore,
-            'activity': activityScore
-        };
-        
-        // Convert scores to a Python dictionary
-        const pyComponentScores = window.pyodide.toPy(componentScores);
-        
-        // Calculate final REBA score
-        const finalResults = await window.pyodide.runPythonAsync(
-            'calculate_final_reba_score(component_scores)',
-            {component_scores: pyComponentScores}
-        );
-        
-        // Convert Python dictionary to JavaScript object
-        const jsResults = finalResults.toJs({create_proxies: false});
-        
-        // Merge with angle values for display
-        const displayResults = {
-            ...jsResults,
-            neck_angle: neckAngle,
-            trunk_angle: trunkAngle,
-            legs_angle: legsAngle,
-            upper_arm_angle: upperArmAngle,
-            lower_arm_angle: lowerArmAngle,
-            wrist_angle: wristAngle
-        };
-        
-        // Display results
-        displayREBAResults(displayResults);
-    } catch (error) {
-        console.error("Error calculating REBA score:", error);
-        alert("Error calculating REBA score. Please check the console for details.");
-    }
+  try {
+    // Get angles from the drawn lines
+    const neckAngle = angles['neck'] || 0;
+    const trunkAngle = angles['trunk'] || 0;
+    const legsAngle = Math.abs(angles['lower-leg'] - angles['upper-leg']) || 0;
+    const upperArmAngle = angles['upper-arm'] || 0;
+    const lowerArmAngle = Math.abs(angles['lower-arm'] - angles['upper-arm']) || 0;
+    const wristAngle = Math.abs(angles['wrist'] - angles['lower-arm']) || 0;
+    
+    // Get adjustment values from the stored adjustments
+    const neckTwisted = adjustments.neck.twisted;
+    const neckSideBending = adjustments.neck.sideBending;
+    const trunkTwisted = adjustments.trunk.twisted;
+    const trunkSideBending = adjustments.trunk.sideBending;
+    const legRaised = adjustments.legs.raised;
+    const shoulderRaised = adjustments.arms.shoulderRaised;
+    const armAbducted = adjustments.arms.abducted;
+    const armSupported = adjustments.arms.supported;
+    const wristTwisted = adjustments.wrist.twisted;
+    const forceLevel = adjustments.force.level;
+    const shock = adjustments.force.shock;
+    const coupling = adjustments.coupling.quality;
+    const staticPosture = adjustments.activity.staticPosture;
+    const repeatedActions = adjustments.activity.repeatedActions;
+    const rapidChanges = adjustments.activity.rapidChanges;
+    
+    // Calculate individual component scores using Python functions
+    const neckScore = await window.pyodide.runPythonAsync(`calculate_neck_score(${neckAngle}, ${neckTwisted}, ${neckSideBending})`);
+    const trunkScore = await window.pyodide.runPythonAsync(`calculate_trunk_score(${trunkAngle}, ${trunkTwisted}, ${trunkSideBending})`);
+    const legsScore = await window.pyodide.runPythonAsync(`calculate_legs_score(${legsAngle}, ${legRaised})`);
+    const upperArmScore = await window.pyodide.runPythonAsync(`calculate_upper_arm_score(${upperArmAngle}, ${shoulderRaised}, ${armAbducted}, ${armSupported})`);
+    const lowerArmScore = await window.pyodide.runPythonAsync(`calculate_lower_arm_score(${lowerArmAngle})`);
+    const wristScore = await window.pyodide.runPythonAsync(`calculate_wrist_score(${wristAngle}, ${wristTwisted})`);
+    const forceScore = await window.pyodide.runPythonAsync(`calculate_force_score(${forceLevel}, ${shock})`);
+    const couplingScore = await window.pyodide.runPythonAsync(`calculate_coupling_score(${coupling})`);
+    const activityScore = await window.pyodide.runPythonAsync(`calculate_activity_score(${staticPosture}, ${repeatedActions}, ${rapidChanges})`);
+    
+    // Create a dictionary of component scores to pass to the final calculation
+    const componentScores = {
+      'neck': neckScore,
+      'trunk': trunkScore,
+      'legs': legsScore,
+      'force': forceScore,
+      'upper_arm': upperArmScore,
+      'lower_arm': lowerArmScore,
+      'wrist': wristScore,
+      'coupling': couplingScore,
+      'activity': activityScore
+    };
+    
+    // Convert scores to a Python dictionary
+    const pyComponentScores = window.pyodide.toPy(componentScores);
+    
+    // Calculate final REBA score
+    const finalResults = await window.pyodide.runPythonAsync(
+      'calculate_final_reba_score(component_scores)',
+      {component_scores: pyComponentScores}
+    );
+    
+    // Convert Python dictionary to JavaScript object
+    const jsResults = finalResults.toJs({create_proxies: false});
+    
+    // Merge with angle values for display
+    const displayResults = {
+      ...jsResults,
+      neck_angle: neckAngle,
+      trunk_angle: trunkAngle,
+      legs_angle: legsAngle,
+      upper_arm_angle: upperArmAngle,
+      lower_arm_angle: lowerArmAngle,
+      wrist_angle: wristAngle
+    };
+    
+    // Display results
+    displayREBAResults(displayResults);
+  } catch (error) {
+    console.error("Error calculating REBA score:", error);
+    alert("Error calculating REBA score. Please check the console for details.");
+  }
 }
 
 // Display results in the UI
