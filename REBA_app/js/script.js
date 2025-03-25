@@ -8,6 +8,87 @@ let referenceDirection = 'vertical';
 let previewLine = null;
 let angles = {};
 
+function calculateAngle(point1, point2, toolType) {
+    // Calculate vector for this line
+    const vector = {
+        x: point2.x - point1.x,
+        y: point2.y - point1.y
+    };
+    
+    // Default reference is vertical (0, -1) because canvas Y is inverted
+    let refVector = { x: 0, y: -1 };
+    
+    // For body parts that need reference to other body parts
+    if (toolType === 'neck') {
+        // Neck reference is trunk
+        if (lines['trunk']) {
+            const trunkVector = {
+                x: lines['trunk'][1].x - lines['trunk'][0].x,
+                y: lines['trunk'][1].y - lines['trunk'][0].y
+            };
+            refVector = trunkVector;
+        }
+    } else if (toolType === 'lower-arm') {
+        // Lower arm reference is upper arm
+        if (lines['upper-arm']) {
+            const upperArmVector = {
+                x: lines['upper-arm'][1].x - lines['upper-arm'][0].x,
+                y: lines['upper-arm'][1].y - lines['upper-arm'][0].y
+            };
+            refVector = upperArmVector;
+        }
+    } else if (toolType === 'wrist') {
+        // Wrist reference is lower arm
+        if (lines['lower-arm']) {
+            const lowerArmVector = {
+                x: lines['lower-arm'][1].x - lines['lower-arm'][0].x,
+                y: lines['lower-arm'][1].y - lines['lower-arm'][0].y
+            };
+            refVector = lowerArmVector;
+        }
+    } else if (toolType === 'lower-leg') {
+        // Lower leg reference is upper leg
+        if (lines['upper-leg']) {
+            const upperLegVector = {
+                x: lines['upper-leg'][1].x - lines['upper-leg'][0].x,
+                y: lines['upper-leg'][1].y - lines['upper-leg'][0].y
+            };
+            refVector = upperLegVector;
+        }
+    } else if (toolType === 'trunk' || toolType === 'upper-arm' || toolType === 'upper-leg') {
+        // These use the reference line or vertical
+        if (lines['reference']) {
+            const referenceVector = {
+                x: lines['reference'][1].x - lines['reference'][0].x,
+                y: lines['reference'][1].y - lines['reference'][0].y
+            };
+            refVector = referenceVector;
+        }
+    }
+    
+    // Calculate dot product
+    const dotProduct = vector.x * refVector.x + vector.y * refVector.y;
+    
+    // Calculate magnitudes
+    const vectorMag = Math.sqrt(vector.x * vector.x + vector.y * vector.y);
+    const refMag = Math.sqrt(refVector.x * refVector.x + refVector.y * refVector.y);
+    
+    // Calculate angle using dot product formula
+    let angle = Math.acos(dotProduct / (vectorMag * refMag)) * (180 / Math.PI);
+    
+    // For some measurements, we care about direction (e.g. flexion vs extension)
+    // Use cross product to determine direction
+    const crossProduct = vector.x * refVector.y - vector.y * refVector.x;
+    if (toolType === 'neck' || toolType === 'trunk') {
+        // For neck and trunk, negative angle means extension
+        if (crossProduct < 0) {
+            angle = -angle;
+        }
+    }
+    
+    return angle;
+}
+
 // Add this function near the top of the script, after variable declarations
 function handleImageUpload(e) {
     console.log('handleImageUpload function called');
