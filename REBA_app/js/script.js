@@ -941,21 +941,22 @@ async function calculateREBA() {
     const wristAngle = Math.abs(angles['wrist'] - angles['lower-arm']) || 0;
     
     // Get adjustment values from the stored adjustments
-    const neckTwisted = adjustments.neck.twisted;
-    const neckSideBending = adjustments.neck.sideBending;
-    const trunkTwisted = adjustments.trunk.twisted;
-    const trunkSideBending = adjustments.trunk.sideBending;
-    const legRaised = adjustments.legs.raised;
-    const shoulderRaised = adjustments.arms.shoulderRaised;
-    const armAbducted = adjustments.arms.abducted;
-    const armSupported = adjustments.arms.supported;
-    const wristTwisted = adjustments.wrist.twisted;
+    // Convert JavaScript boolean to Python boolean strings
+    const neckTwisted = adjustments.neck.twisted ? "True" : "False";
+    const neckSideBending = adjustments.neck.sideBending ? "True" : "False";
+    const trunkTwisted = adjustments.trunk.twisted ? "True" : "False";
+    const trunkSideBending = adjustments.trunk.sideBending ? "True" : "False";
+    const legRaised = adjustments.legs.raised ? "True" : "False";
+    const shoulderRaised = adjustments.arms.shoulderRaised ? "True" : "False";
+    const armAbducted = adjustments.arms.abducted ? "True" : "False";
+    const armSupported = adjustments.arms.supported ? "True" : "False";
+    const wristTwisted = adjustments.wrist.twisted ? "True" : "False";
     const forceLevel = adjustments.force.level;
-    const shock = adjustments.force.shock;
+    const shock = adjustments.force.shock ? "True" : "False";
     const coupling = adjustments.coupling.quality;
-    const staticPosture = adjustments.activity.staticPosture;
-    const repeatedActions = adjustments.activity.repeatedActions;
-    const rapidChanges = adjustments.activity.rapidChanges;
+    const staticPosture = adjustments.activity.staticPosture ? "True" : "False";
+    const repeatedActions = adjustments.activity.repeatedActions ? "True" : "False";
+    const rapidChanges = adjustments.activity.rapidChanges ? "True" : "False";
     
     // Calculate individual component scores using Python functions
     const neckScore = await window.pyodide.runPythonAsync(`calculate_neck_score(${neckAngle}, ${neckTwisted}, ${neckSideBending})`);
@@ -967,6 +968,12 @@ async function calculateREBA() {
     const forceScore = await window.pyodide.runPythonAsync(`calculate_force_score(${forceLevel}, ${shock})`);
     const couplingScore = await window.pyodide.runPythonAsync(`calculate_coupling_score(${coupling})`);
     const activityScore = await window.pyodide.runPythonAsync(`calculate_activity_score(${staticPosture}, ${repeatedActions}, ${rapidChanges})`);
+
+    // Debug - log the values to see if any are undefined or causing issues
+    console.log("Calculated scores:", {
+      neckScore, trunkScore, legsScore, upperArmScore, 
+      lowerArmScore, wristScore, forceScore, couplingScore, activityScore
+    });
     
     // Create a dictionary of component scores to pass to the final calculation
     const componentScores = {
@@ -1008,6 +1015,11 @@ async function calculateREBA() {
     displayREBAResults(displayResults);
   } catch (error) {
     console.error("Error calculating REBA score:", error);
+    // More detailed error logging
+    console.error("Error details:", {
+      angles: JSON.stringify(angles),
+      adjustments: JSON.stringify(adjustments)
+    });
     alert("Error calculating REBA score. Please check the console for details.");
   }
 }
