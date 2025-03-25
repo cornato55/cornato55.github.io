@@ -4,6 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REBA Assessment Tool</title>
+    <link rel="stylesheet" href="../styles.css">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../about.html">About Me</a></li>
+                <li><a href="../projects.html">Projects</a></li>
+                <li><a href="../blog.html">Blog</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h1>REBA Assessment Tool</h1>
+        <div id="loading" class="loading">Loading Python environment... This may take a few moments.</div>
+        <div id="app-container" style="display: none;">
+            <!-- Rest of the existing content remains the same -->
+            <div class="container">
+                <div class="drawing-area">
+                    <div class="step-instructions" id="instructions">
+                        Upload an image to begin the REBA assessment.
+                    </div>
+                    <div>
+                        <input type="file" id="image-upload" accept="image/*" />
+                        <button id="clear-canvas">Clear All</button>
+                    </div>
+                    <canvas id="canvas" width="640" height="480"></canvas>
+                    <div>
+                        <button id="draw-reference" class="tool-btn">Reference Line</button>
+                        <button id="draw-neck" class="tool-btn">Neck Line</button>
+                        <button id="draw-trunk" class="tool-btn">Trunk Line</button>
+                        <button id="draw-upper-leg" class="tool-btn">Upper Leg</button>
+                        <button id="draw-lower-leg" class="tool-btn">Lower Leg</button>
+                        <button id="draw-upper-arm" class="tool-btn">Upper Arm</button>
+                        <button id="draw-lower-arm" class="tool-btn">Lower Arm</button>
+                        <button id="draw-wrist" class="tool-btn">Wrist Line</button>
+                        <button id="undo-last" disabled>Undo Last Line</button>
+                    </div>
+                </div>
+                <!-- Rest of the existing content -->
+                <!-- ... -->
+            </div>
+        </div>
+    </main>
+
+    <script src="./js/script.js"></script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REBA Assessment Tool</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
 </head>
