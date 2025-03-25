@@ -7,6 +7,7 @@ let isDrawing = false;
 let referenceDirection = 'vertical';
 let previewLine = null;
 let angles = {};
+let uploadedImage = null;
 
 function calculateAngle(point1, point2, toolType) {
     // Calculate vector for this line
@@ -96,19 +97,19 @@ function handleImageUpload(e) {
     if (file) {
         const reader = new FileReader();
         reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
+            uploadedImage = new Image();
+            uploadedImage.onload = function() {
                 console.log('Image loaded');
                 
                 // Resize canvas to match image dimensions
-                canvas.width = img.width;
-                canvas.height = img.height;
+                canvas.width = uploadedImage.width;
+                canvas.height = uploadedImage.height;
                 canvas.style.width = '100%';
-                canvas.style.maxWidth = img.width + 'px';
+                canvas.style.maxWidth = uploadedImage.width + 'px';
                 
                 // Clear canvas and draw image
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
+                ctx.drawImage(uploadedImage, 0, 0);
                 
                 // Reset drawing state
                 lines = {};
@@ -125,10 +126,10 @@ function handleImageUpload(e) {
                 // Force a redraw and recalculate scaling
                 resizeCanvas();
             };
-            img.onerror = function() {
+            uploadedImage.onerror = function() {
                 console.error('Error loading image');
             };
-            img.src = event.target.result;
+            uploadedImage.src = event.target.result;
         };
         reader.onerror = function() {
             console.error('Error reading file');
@@ -395,10 +396,8 @@ function clearCanvas() {
     angles = {};
     
     // Redraw the image if available
-    if (document.getElementById('image-upload').files.length > 0) {
-        const img = new Image();
-        img.src = URL.createObjectURL(document.getElementById('image-upload').files[0]);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (uploadedImage) {
+        ctx.drawImage(uploadedImage, 0, 0);
     }
     
     // Reset checkpoints
@@ -438,10 +437,8 @@ function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Redraw the image if available
-    if (document.getElementById('image-upload').files.length > 0) {
-        const img = new Image();
-        img.src = URL.createObjectURL(document.getElementById('image-upload').files[0]);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (uploadedImage) {
+        ctx.drawImage(uploadedImage, 0, 0);
     }
     
     // Redraw all saved lines
