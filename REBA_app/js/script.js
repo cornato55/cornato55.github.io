@@ -185,7 +185,9 @@ function startDrawing(e) {
         console.log('No current tool selected');
         return;
     }
-    
+
+    e.preventDefault();
+  
     isDrawing = true;
     
     // Get canvas coordinates
