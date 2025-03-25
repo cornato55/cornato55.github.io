@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REBA Assessment Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+</head>
+<body>
+    <h1>REBA Assessment Tool</h1>
+    <div id="loading" class="loading">Loading Python environment... This may take a few moments.</div>
+    <div id="app-container" style="display: none;">
+        <div class="container">
+            <div class="drawing-area">
+                <div class="step-instructions" id="instructions">
+                    Upload an image to begin the REBA assessment.
+                </div>
+                <div>
+                    <input type="file" id="image-upload" accept="image/*" />
+                    <button id="clear-canvas">Clear All</button>
+                </div>
+                <canvas id="canvas" width="640" height="480"></canvas>
+                <div>
+                    <button id="draw-reference" class="tool-btn">Reference Line</button>
+                    <button id="draw-neck" class="tool-btn">Neck Line</button>
+                    <button id="draw-trunk" class="tool-btn">Trunk Line</button>
+                    <button id="draw-upper-leg" class="tool-btn">Upper Leg</button>
+                    <button id="draw-lower-leg" class="tool-btn">Lower Leg</button>
+                    <button id="draw-upper-arm" class="tool-btn">Upper Arm</button>
+                    <button id="draw-lower-arm" class="tool-btn">Lower Arm</button>
+                    <button id="draw-wrist" class="tool-btn">Wrist Line</button>
+                    <button id="undo-last" disabled>Undo Last Line</button>
+                </div>
+            </div>
+            <div class="controls">
+                <h2>Assessment Process</h2>
+                <ol class="checkpoint-list" id="checkpoint-list">
+                    <li data-step="upload"><span class="checkbox"></span> Upload image</li>
+                    <li data-step="reference"><span class="checkbox"></span> Draw reference line</li>
+                    <li data-step="neck"><span class="checkbox"></span> Draw neck line</li>
+                    <li data-step="trunk"><span class="checkbox"></span> Draw trunk line</li>
+                    <li data-step="legs"><span class="checkbox"></span> Draw leg lines</li>
+                    <li data-step="arms"><span class="checkbox"></span> Draw arm lines</li>
+                    <li data-step="wrist"><span class="checkbox"></span> Draw wrist line</li>
+                    <li data-step="adjustments"><span class="checkbox"></span> Set adjustments</li>
+                </ol>
+                
+                <div id="adjustments-form" style="display: none;">
+                    <h3>Adjustments</h3>
+                    
+                    <h4>Neck</h4>
+                    <label><input type="checkbox" id="neck-twisted"> Neck is twisted</label><br>
+                    <label><input type="checkbox" id="neck-side-bending"> Neck is side bending</label>
+                    
+                    <h4>Trunk</h4>
+                    <label><input type="checkbox" id="trunk-twisted"> Trunk is twisted</label><br>
+                    <label><input type="checkbox" id="trunk-side-bending"> Trunk is side bending</label>
+                    
+                    <h4>Legs</h4>
+                    <label><input type="checkbox" id="leg-raised"> One leg is raised</label>
+                    
+                    <h4>Upper Arms</h4>
+                    <label><input type="checkbox" id="shoulder-raised"> Shoulder is raised</label><br>
+                    <label><input type="checkbox" id="arm-abducted"> Upper arm is abducted</label><br>
+                    <label><input type="checkbox" id="arm-supported"> Arm is supported or person is leaning</label>
+                    
+                    <h4>Wrist</h4>
+                    <label><input type="checkbox" id="wrist-twisted"> Wrist is bent from midline or twisted</label>
+                    
+                    <h4>Load/Force</h4>
+                    <select id="force-load">
+                        <option value="0">&lt; 11 lbs (&lt; 5 kg)</option>
+                        <option value="1">11-22 lbs (5-10 kg)</option>
+                        <option value="2">&gt; 22 lbs (&gt; 10 kg)</option>
+                    </select><br>
+                    <label><input type="checkbox" id="shock-force"> Shock or rapid buildup of force</label>
+                    
+                    <h4>Coupling</h4>
+                    <select id="coupling">
+                        <option value="0">Good (well-fitting handle)</option>
+                        <option value="1">Fair (acceptable but not ideal)</option>
+                        <option value="2">Poor (not acceptable)</option>
+                        <option value="3">Unacceptable (unsafe grip)</option>
+                    </select>
+                    
+                    <h4>Activity</h4>
+                    <label><input type="checkbox" id="static-posture"> Body parts static for > 1 minute</label><br>
+                    <label><input type="checkbox" id="repeated-actions"> Repeated actions (> 4/minute)</label><br>
+                    <label><input type="checkbox" id="rapid-changes"> Rapid changes in posture</label>
+                </div>
+                
+                <button id="calculate-btn" class="next-step" disabled>Calculate REBA Score</button>
+            </div>
+        </div>
+        
+        <div id="results" class="results">
+            <h2>REBA Assessment Results</h2>
+            
+            <div class="score-section">
+                <div class="score-box">
+                    <h3>Group A</h3>
+                    <p>Neck: <span id="neck-score"></span> points (angle: <span id="neck-angle-value"></span>°)</p>
+                    <p>Trunk: <span id="trunk-score"></span> points (angle: <span id="trunk-angle-value"></span>°)</p>
+                    <p>Legs: <span id="legs-score"></span> points (angle: <span id="legs-angle-value"></span>°)</p>
+                    <p>Posture A Score: <span id="posture-a-score"></span></p>
+                    <p>Load/Force: <span id="force-score"></span></p>
+                    <p><strong>Score A: <span id="score-a"></span></strong></p>
+                </div>
+                
+                <div class="score-box">
+                    <h3>Group B</h3>
+                    <p>Upper Arm: <span id="upper-arm-score"></span> points (angle: <span id="upper-arm-angle-value"></span>°)</p>
+                    <p>Lower Arm: <span id="lower-arm-score"></span> points (angle: <span id="lower-arm-angle-value"></span>°)</p>
+                    <p>Wrist: <span id="wrist-score"></span> points (angle: <span id="wrist-angle-value"></span>°)</p>
+                    <p>Posture B Score: <span id="posture-b-score"></span></p>
+                    <p>Coupling: <span id="coupling-score"></span></p>
+                    <p><strong>Score B: <span id="score-b"></span></strong></p>
+                </div>
+            </div>
+            
+            <p>Table C Score: <span id="table-c-score"></span></p>
+            <p>Activity Score: <span id="activity-score"></span></p>
+            
+            <div class="final-score">
+                FINAL REBA SCORE: <span id="final-score"></span>
+            </div>
+            
+            <div class="risk-level">
+                Risk Level: <span id="risk-level"></span>
+            </div>
+            
+            <p id="risk-description"></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
