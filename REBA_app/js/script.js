@@ -528,14 +528,17 @@ function updateCheckpoints(step) {
     }
     
     // Enable calculation button if all required steps are complete
-    if (lines['reference'] && lines['neck'] && lines['trunk'] && 
+   if (lines['reference'] && lines['neck'] && lines['trunk'] && 
         lines['upper-leg'] && lines['lower-leg'] && 
         lines['upper-arm'] && lines['lower-arm'] && lines['wrist']) {
-        document.getElementById('adjustments-form').style.display = 'block';
+     
         document.getElementById('calculate-btn').disabled = false;
-        
+     
         // Mark adjustments step as available
-        document.querySelector('[data-step="adjustments"]').classList.add('available');
+        const adjustmentsItem = document.querySelector('[data-step="adjustments"]');
+        if (adjustmentsItem) {
+            adjustmentsItem.classList.add('available');
+        }
     }
 }
 
