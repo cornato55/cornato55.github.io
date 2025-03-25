@@ -8,6 +8,64 @@ let referenceDirection = 'vertical';
 let previewLine = null;
 let angles = {};
 
+function updateCheckpoints(step) {
+    // Mark the current step as complete
+    const stepItem = document.querySelector(`[data-step="${step}"]`);
+    if (stepItem) {
+        stepItem.classList.add('complete');
+    }
+    
+    // Make next step available
+    const nextSteps = {
+        'upload': 'reference',
+        'reference': 'neck',
+        'neck': 'trunk',
+        'trunk': 'legs',
+        'legs': 'arms',
+        'arms': 'wrist',
+        'wrist': 'adjustments'
+    };
+    
+    const nextStep = nextSteps[step];
+    if (nextStep) {
+        const nextItem = document.querySelector(`[data-step="${nextStep}"]`);
+        if (nextItem) {
+            nextItem.classList.add('available');
+        }
+    }
+    
+    // Enable calculation button if all required steps are complete
+    if (lines['reference'] && lines['neck'] && lines['trunk'] && 
+        lines['upper-leg'] && lines['lower-leg'] && 
+        lines['upper-arm'] && lines['lower-arm'] && lines['wrist']) {
+        document.getElementById('adjustments-form').style.display = 'block';
+        document.getElementById('calculate-btn').disabled = false;
+        
+        // Mark adjustments step as available
+        document.querySelector('[data-step="adjustments"]').classList.add('available');
+    }
+}
+
+function updateCheckpointForTool(toolType) {
+    if (toolType === 'reference') {
+        updateCheckpoints('upload');
+    } else if (toolType === 'neck') {
+        updateCheckpoints('reference');
+    } else if (toolType === 'trunk') {
+        updateCheckpoints('neck');
+    } else if (toolType === 'upper-leg' || toolType === 'lower-leg') {
+        if (lines['upper-leg'] && lines['lower-leg']) {
+            updateCheckpoints('trunk');
+        }
+    } else if (toolType === 'upper-arm' || toolType === 'lower-arm') {
+        if (lines['upper-arm'] && lines['lower-arm']) {
+            updateCheckpoints('legs');
+        }
+    } else if (toolType === 'wrist') {
+        updateCheckpoints('arms');
+    }
+}
+
 // Initialize Pyodide
 async function main() {
     try {
@@ -108,18 +166,21 @@ function setupEventListeners() {
     document.getElementById('calculate-btn').addEventListener('click', calculateREBA);
 }
 
-// Handle image upload
 function handleImageUpload(e) {
+    console.log('Image upload started');
     const file = e.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = function(event) {
             const img = new Image();
             img.onload = function() {
+                console.log('Image loaded');
+                
                 // Resize canvas to match image dimensions
                 canvas.width = img.width;
                 canvas.height = img.height;
-                resizeCanvas();
+                canvas.style.width = '100%';
+                canvas.style.maxWidth = img.width + 'px';
                 
                 // Clear canvas and draw image
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -133,14 +194,24 @@ function handleImageUpload(e) {
                 // Update UI
                 document.getElementById('instructions').textContent = 'Now draw a vertical reference line.';
                 selectTool('draw-reference');
-                updateCheckpoints('upload');
+                updateCheckpoints('upload'); // Add this line
+                
+                console.log('Canvas setup complete');
+                
+                // Force a redraw and recalculate scaling
+                resizeCanvas();
+            };
+            img.onerror = function() {
+                console.error('Error loading image');
             };
             img.src = event.target.result;
+        };
+        reader.onerror = function() {
+            console.error('Error reading file');
         };
         reader.readAsDataURL(file);
     }
 }
-
 // Select drawing tool
 function selectTool(toolId) {
     // Reset previous selection
