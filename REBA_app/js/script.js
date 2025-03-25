@@ -111,35 +111,23 @@ function handleImageUpload(e) {
             uploadedImage.onload = function() {
                 console.log('Image loaded');
                 
-                // Get viewport dimensions (accounting for some UI elements)
-                const viewportWidth = window.innerWidth * 0.9; // 90% of window width
-                const viewportHeight = window.innerHeight * 0.8; // 80% of window height to account for UI elements
+                // Get container dimensions
+                const container = canvas.parentElement;
+                const maxWidth = container.clientWidth * 0.95; // 95% of container width
+                const maxHeight = window.innerHeight * 0.6; // 60% of viewport height
                 
-                // Calculate scaling factors
-                const scaleWidth = viewportWidth / uploadedImage.width;
-                const scaleHeight = viewportHeight / uploadedImage.height;
+                // Calculate scale to fit within container
+                const scaleWidth = maxWidth / uploadedImage.width;
+                const scaleHeight = maxHeight / uploadedImage.height;
+                const scale = Math.min(scaleWidth, scaleHeight, 1); // Don't scale up small images
                 
-                // Use the smaller scaling factor to ensure image fits completely
-                const scale = Math.min(scaleWidth, scaleHeight, 1); // Don't upscale if image is already smaller
+                // Set canvas dimensions
+                canvas.width = uploadedImage.width * scale;
+                canvas.height = uploadedImage.height * scale;
                 
-                // Set new dimensions
-                const newWidth = uploadedImage.width * scale;
-                const newHeight = uploadedImage.height * scale;
-                
-                // Resize canvas to match scaled image dimensions
-                canvas.width = newWidth;
-                canvas.height = newHeight;
-                canvas.style.width = newWidth + 'px';
-                canvas.style.height = newHeight + 'px';
-                
-                // Clear canvas and draw image
+                // Clear canvas and draw scaled image
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(uploadedImage, 0, 0, newWidth, newHeight);
-                
-                // Store original dimensions for future reference if needed
-                uploadedImage.originalWidth = uploadedImage.width;
-                uploadedImage.originalHeight = uploadedImage.height;
-                uploadedImage.scaleFactor = scale;
+                ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
                 
                 // Reset drawing state
                 lines = {};
@@ -151,19 +139,9 @@ function handleImageUpload(e) {
                 selectTool('draw-reference');
                 updateCheckpoints('upload');
                 
-                console.log('Canvas setup complete with dimensions:', newWidth, 'x', newHeight);
-                console.log('Scale factor:', scale);
-                
-                // Scroll to the canvas to ensure it's visible
-                canvas.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            };
-            uploadedImage.onerror = function() {
-                console.error('Error loading image');
+                console.log('Canvas setup complete');
             };
             uploadedImage.src = event.target.result;
-        };
-        reader.onerror = function() {
-            console.error('Error reading file');
         };
         reader.readAsDataURL(file);
     }
