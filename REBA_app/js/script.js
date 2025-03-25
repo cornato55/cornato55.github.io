@@ -387,30 +387,54 @@ function drawLine(point1, point2, toolType) {
     ctx.fillText(labelMap[toolType], midX - 20, midY - 10);
 }
 
-// Set up event listeners
-function setupEventListeners() {
-    // Image upload
-    document.getElementById('image-upload').addEventListener('change', handleImageUpload);
-    
-    // Canvas drawing events
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', drawPreview);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseleave', stopDrawing);
-    
-    // Tool selection buttons
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            selectTool(this.id);
-        });
-    });
-    
-    // Other buttons
-    document.getElementById('clear-canvas').addEventListener('click', clearCanvas);
-    document.getElementById('undo-last').addEventListener('click', undoLastLine);
-    document.getElementById('calculate-btn').addEventListener('click', calculateREBA);
+function handleImageUpload(e) {
+    console.log('Image upload started');
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                console.log('Image loaded');
+                
+                // Resize canvas to match image dimensions
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvas.style.width = '100%';
+                canvas.style.maxWidth = img.width + 'px';
+                
+                // Clear canvas and draw image
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                
+                // Reset drawing state
+                lines = {};
+                points = [];
+                angles = {};
+                
+                // Update UI
+                document.getElementById('instructions').textContent = 'Now draw a vertical reference line.';
+                selectTool('draw-reference');
+                updateCheckpoints('upload');
+                
+                console.log('Canvas setup complete');
+                
+                // Force a redraw and recalculate scaling
+                resizeCanvas();
+            };
+            img.onerror = function() {
+                console.error('Error loading image');
+            };
+            img.src = event.target.result;
+        };
+        reader.onerror = function() {
+            console.error('Error reading file');
+        };
+        reader.readAsDataURL(file);
+    }
 }
 
+// Set up event listeners
 function setupEventListeners() {
     console.log('Document state:', document.readyState);
     console.log('Attempting to set up event listeners');
