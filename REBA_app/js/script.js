@@ -400,52 +400,58 @@ function setupEventListeners() {
     document.getElementById('calculate-btn').addEventListener('click', calculateREBA);
 }
 
-function handleImageUpload(e) {
-    console.log('Image upload started');
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
-                console.log('Image loaded');
-                
-                // Resize canvas to match image dimensions
-                canvas.width = img.width;
-                canvas.height = img.height;
-                canvas.style.width = '100%';
-                canvas.style.maxWidth = img.width + 'px';
-                
-                // Clear canvas and draw image
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-                
-                // Reset drawing state
-                lines = {};
-                points = [];
-                angles = {};
-                
-                // Update UI
-                document.getElementById('instructions').textContent = 'Now draw a vertical reference line.';
-                selectTool('draw-reference');
-                updateCheckpoints('upload'); // Add this line
-                
-                console.log('Canvas setup complete');
-                
-                // Force a redraw and recalculate scaling
-                resizeCanvas();
-            };
-            img.onerror = function() {
-                console.error('Error loading image');
-            };
-            img.src = event.target.result;
-        };
-        reader.onerror = function() {
-            console.error('Error reading file');
-        };
-        reader.readAsDataURL(file);
+function setupEventListeners() {
+    console.log('Setting up event listeners');
+    
+    // Check if elements exist before adding event listeners
+    const imageUpload = document.getElementById('image-upload');
+    const canvas = document.getElementById('canvas');
+    const clearCanvasBtn = document.getElementById('clear-canvas');
+    const undoLastBtn = document.getElementById('undo-last');
+    const calculateBtn = document.getElementById('calculate-btn');
+    
+    if (imageUpload) {
+        imageUpload.addEventListener('change', handleImageUpload);
+    } else {
+        console.error('Image upload element not found');
+    }
+    
+    if (canvas) {
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', drawPreview);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+    } else {
+        console.error('Canvas element not found');
+    }
+    
+    // Tool selection buttons
+    const toolButtons = document.querySelectorAll('.tool-btn');
+    if (toolButtons.length > 0) {
+        toolButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('Tool selected:', this.id);
+                selectTool(this.id);
+            });
+        });
+    } else {
+        console.error('No tool buttons found');
+    }
+    
+    // Other buttons
+    if (clearCanvasBtn) {
+        clearCanvasBtn.addEventListener('click', clearCanvas);
+    }
+    
+    if (undoLastBtn) {
+        undoLastBtn.addEventListener('click', undoLastLine);
+    }
+    
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', calculateREBA);
     }
 }
+
 // Select drawing tool
 function selectTool(toolId) {
     // Reset previous selection
@@ -637,5 +643,4 @@ function displayREBAResults(result) {
     document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Run main function on page load
-window.onload = main;
+document.addEventListener('DOMContentLoaded', main);
