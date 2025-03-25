@@ -192,10 +192,8 @@ function startDrawing(e) {
     
     // Get canvas coordinates
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
     console.log('Drawing start coordinates:', x, y);
     
@@ -214,10 +212,8 @@ function drawPreview(e) {
     
     // Get canvas coordinates
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
     // Redraw the image and all lines
     redrawCanvas();
@@ -238,10 +234,8 @@ function stopDrawing(e) {
   
   // Get canvas coordinates
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top) * scaleY;
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
   
   // Add ending point
   points.push({x, y});
