@@ -8,6 +8,54 @@ let referenceDirection = 'vertical';
 let previewLine = null;
 let angles = {};
 
+// Add this function near the top of the script, after variable declarations
+function handleImageUpload(e) {
+    console.log('handleImageUpload function called');
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                console.log('Image loaded');
+                
+                // Resize canvas to match image dimensions
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvas.style.width = '100%';
+                canvas.style.maxWidth = img.width + 'px';
+                
+                // Clear canvas and draw image
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                
+                // Reset drawing state
+                lines = {};
+                points = [];
+                angles = {};
+                
+                // Update UI
+                document.getElementById('instructions').textContent = 'Now draw a vertical reference line.';
+                selectTool('draw-reference');
+                updateCheckpoints('upload');
+                
+                console.log('Canvas setup complete');
+                
+                // Force a redraw and recalculate scaling
+                resizeCanvas();
+            };
+            img.onerror = function() {
+                console.error('Error loading image');
+            };
+            img.src = event.target.result;
+        };
+        reader.onerror = function() {
+            console.error('Error reading file');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
 function startDrawing(e) {
     console.log('Start drawing called');
     console.log('Current tool:', currentTool);
@@ -385,53 +433,6 @@ function drawLine(point1, point2, toolType) {
     ctx.lineWidth = 1;
     ctx.strokeText(labelMap[toolType], midX - 20, midY - 10);
     ctx.fillText(labelMap[toolType], midX - 20, midY - 10);
-}
-
-function handleImageUpload(e) {
-    console.log('Image upload started');
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
-                console.log('Image loaded');
-                
-                // Resize canvas to match image dimensions
-                canvas.width = img.width;
-                canvas.height = img.height;
-                canvas.style.width = '100%';
-                canvas.style.maxWidth = img.width + 'px';
-                
-                // Clear canvas and draw image
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-                
-                // Reset drawing state
-                lines = {};
-                points = [];
-                angles = {};
-                
-                // Update UI
-                document.getElementById('instructions').textContent = 'Now draw a vertical reference line.';
-                selectTool('draw-reference');
-                updateCheckpoints('upload');
-                
-                console.log('Canvas setup complete');
-                
-                // Force a redraw and recalculate scaling
-                resizeCanvas();
-            };
-            img.onerror = function() {
-                console.error('Error loading image');
-            };
-            img.src = event.target.result;
-        };
-        reader.onerror = function() {
-            console.error('Error reading file');
-        };
-        reader.readAsDataURL(file);
-    }
 }
 
 // Set up event listeners
