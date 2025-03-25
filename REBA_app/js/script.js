@@ -8,6 +8,109 @@ let referenceDirection = 'vertical';
 let previewLine = null;
 let angles = {};
 
+function startDrawing(e) {
+    console.log('Start drawing called');
+    console.log('Current tool:', currentTool);
+    
+    if (!currentTool) {
+        console.log('No current tool selected');
+        return;
+    }
+    
+    isDrawing = true;
+    
+    // Get canvas coordinates
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    console.log('Drawing start coordinates:', x, y);
+    
+    // Start a new line
+    points = [{x, y}];
+    
+    // Draw the first point
+    ctx.fillStyle = 'red';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawPreview(e) {
+    if (!isDrawing || points.length === 0) return;
+    
+    // Get canvas coordinates
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    // Redraw the image and all lines
+    redrawCanvas();
+    
+    // Draw preview line
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 3]);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+}
+
+function stopDrawing(e) {
+    if (!isDrawing || !currentTool) return;
+    
+    // Get canvas coordinates
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    // Add ending point
+    points.push({x, y});
+    
+    // Save the line
+    const toolType = currentTool.replace('draw-', '');
+    lines[toolType] = points.slice();
+    
+    // Calculate angle for this line
+    const angle = calculateAngle(points[0], points[1], toolType);
+    angles[toolType] = angle;
+    
+    // Draw final line
+    redrawCanvas();
+    drawLine(points[0], points[1], toolType);
+    
+    // Draw angle text
+    const midX = (points[0].x + points[1].x) / 2;
+    const midY = (points[0].y + points[1].y) / 2;
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 3;
+    ctx.font = '14px Arial';
+    ctx.strokeText(`${angle.toFixed(1)}°`, midX + 10, midY);
+    ctx.fillText(`${angle.toFixed(1)}°`, midX + 10, midY);
+    
+    // Reset drawing state
+    isDrawing = false;
+    points = [];
+    
+    // Enable undo button
+    document.getElementById('undo-last').disabled = false;
+    
+    // Update checkpoints
+    updateCheckpointForTool(toolType);
+    
+    // Auto-advance to next tool
+    advanceToNextTool(toolType);
+}
+
 function updateCheckpoints(step) {
     // Mark the current step as complete
     const stepItem = document.querySelector(`[data-step="${step}"]`);
@@ -225,6 +328,23 @@ function selectTool(toolId) {
     
     // Update instructions
     updateInstructions(toolId);
+}
+
+function advanceToNextTool(toolType) {
+    const nextToolMap = {
+        'reference': 'draw-neck',
+        'neck': 'draw-trunk',
+        'trunk': 'draw-upper-leg',
+        'upper-leg': 'draw-lower-leg',
+        'lower-leg': 'draw-upper-arm',
+        'upper-arm': 'draw-lower-arm',
+        'lower-arm': 'draw-wrist'
+    };
+    
+    const nextTool = nextToolMap[toolType];
+    if (nextTool) {
+        selectTool(nextTool);
+    }
 }
 
 // Update instructions based on selected tool
