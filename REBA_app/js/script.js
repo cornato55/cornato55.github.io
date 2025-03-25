@@ -627,6 +627,12 @@ function initializeCanvas() {
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
     
+    // Prevent any transform effects on mouse events
+    canvas.addEventListener('mousedown', function(e) {
+        // Stop event propagation to prevent other handlers that might cause zooming
+        e.stopPropagation();
+    });
+    
     // Resize handler to maintain aspect ratio
     window.addEventListener('resize', resizeCanvas);
     
@@ -636,17 +642,15 @@ function initializeCanvas() {
 
 // Resize canvas to maintain aspect ratio
 function resizeCanvas() {
+    // Keep the canvas size fixed at its original dimensions
+    // This prevents unexpected scaling
     const container = canvas.parentElement;
-    const maxWidth = container.clientWidth;
+    const originalWidth = canvas.width;
+    const originalHeight = canvas.height;
     
-    if (canvas.width > maxWidth) {
-        const aspectRatio = canvas.height / canvas.width;
-        canvas.style.width = maxWidth + 'px';
-        canvas.style.height = (maxWidth * aspectRatio) + 'px';
-    } else {
-        canvas.style.width = canvas.width + 'px';
-        canvas.style.height = canvas.height + 'px';
-    }
+    // Only adjust the CSS size, not the canvas dimensions
+    canvas.style.width = originalWidth + 'px';
+    canvas.style.height = originalHeight + 'px';
 }
 
 function clearCanvas() {
