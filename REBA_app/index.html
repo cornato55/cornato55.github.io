@@ -3,6 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REBA Assessment Tool - Collin D. Cortez</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+        }
+        header {
+            background-color: #1f1f1f;
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        nav li {
+            margin-right: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 300;
+            transition: color 0.3s ease;
+        }
+        nav a:hover {
+            color: #64b5f6;
+        }
+        main {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .container {
+            background-color: #1f1f1f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .drawing-area, .controls {
+            margin-bottom: 20px;
+        }
+        canvas {
+            max-width: 100%;
+            background-color: #2c2c2c;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #64b5f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #42a5f5;
+        }
+        button:disabled {
+            background-color: #4f4f4f;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            color: #64b5f6;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        .results {
+            background-color: #2c2c2c;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .score-section {
+            display: flex;
+            justify-content: space-between;
+        }
+        .score-box {
+            background-color: #1f1f1f;
+            border-radius: 4px;
+            padding: 15px;
+            width: 48%;
+        }
+        .final-score {
+            text-align: center;
+            font-size: 1.5em;
+            color: #64b5f6;
+            margin: 20px 0;
+        }
+        .risk-level {
+            text-align: center;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        input[type="file"] {
+            color: #e0e0e0;
+            background-color: #2c2c2c;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../about.html">About Me</a></li>
+                <li><a href="../projects.html">Projects</a></li>
+                <li><a href="../blog.html">Blog</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h1>REBA Assessment Tool</h1>
+        <div id="loading" class="loading">Loading Python environment... This may take a few moments.</div>
+        <div id="app-container" style="display: none;">
+            <div class="container">
+                <!-- Rest of the existing content remains the same -->
+                <div class="drawing-area">
+                    <div class="step-instructions" id="instructions">
+                        Upload an image to begin the REBA assessment.
+                    </div>
+                    <div>
+                        <input type="file" id="image-upload" accept="image/*" />
+                        <button id="clear-canvas">Clear All</button>
+                    </div>
+                    <canvas id="canvas" width="640" height="480"></canvas>
+                    <div>
+                        <button id="draw-reference" class="tool-btn">Reference Line</button>
+                        <button id="draw-neck" class="tool-btn">Neck Line</button>
+                        <button id="draw-trunk" class="tool-btn">Trunk Line</button>
+                        <button id="draw-upper-leg" class="tool-btn">Upper Leg</button>
+                        <button id="draw-lower-leg" class="tool-btn">Lower Leg</button>
+                        <button id="draw-upper-arm" class="tool-btn">Upper Arm</button>
+                        <button id="draw-lower-arm" class="tool-btn">Lower Arm</button>
+                        <button id="draw-wrist" class="tool-btn">Wrist Line</button>
+                        <button id="undo-last" disabled>Undo Last Line</button>
+                    </div>
+                </div>
+                <!-- Rest of the existing content -->
+                <!-- Adjustments form, results section, etc. -->
+            </div>
+        </div>
+    </main>
+
+    <script src="./js/script.js"></script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REBA Assessment Tool</title>
     <link rel="stylesheet" href="../styles.css">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
