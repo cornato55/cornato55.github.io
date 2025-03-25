@@ -245,6 +245,137 @@ function resizeCanvas() {
     }
 }
 
+function clearCanvas() {
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Reset drawing state
+    lines = {};
+    points = [];
+    angles = {};
+    
+    // Redraw the image if available
+    if (document.getElementById('image-upload').files.length > 0) {
+        const img = new Image();
+        img.src = URL.createObjectURL(document.getElementById('image-upload').files[0]);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+    
+    // Reset checkpoints
+    document.querySelectorAll('.checkpoint-list li').forEach(li => {
+        li.classList.remove('complete');
+        li.classList.remove('available');
+    });
+    
+    // Make first step available again
+    document.querySelector('[data-step="upload"]').classList.add('available');
+    
+    // Reset UI
+    document.getElementById('instructions').textContent = 'Upload an image to begin the REBA assessment.';
+    document.getElementById('undo-last').disabled = true;
+    document.getElementById('calculate-btn').disabled = true;
+    document.getElementById('adjustments-form').style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+}
+
+function undoLastLine() {
+    if (currentTool) {
+        const toolType = currentTool.replace('draw-', '');
+        if (lines[toolType]) {
+            delete lines[toolType];
+            delete angles[toolType];
+            redrawCanvas();
+        }
+    }
+    
+    // If no more lines, disable undo button
+    if (Object.keys(lines).length === 0) {
+        document.getElementById('undo-last').disabled = true;
+    }
+}
+
+function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Redraw the image if available
+    if (document.getElementById('image-upload').files.length > 0) {
+        const img = new Image();
+        img.src = URL.createObjectURL(document.getElementById('image-upload').files[0]);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+    
+    // Redraw all saved lines
+    for (const [toolType, points] of Object.entries(lines)) {
+        if (points && points.length >= 2) {
+            drawLine(points[0], points[1], toolType);
+            
+            // Redraw angle text
+            if (angles[toolType] !== undefined) {
+                const midX = (points[0].x + points[1].x) / 2;
+                const midY = (points[0].y + points[1].y) / 2;
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 3;
+                ctx.font = '14px Arial';
+                ctx.strokeText(`${angles[toolType].toFixed(1)}°`, midX + 10, midY);
+                ctx.fillText(`${angles[toolType].toFixed(1)}°`, midX + 10, midY);
+            }
+        }
+    }
+}
+
+function drawLine(point1, point2, toolType) {
+    // Different colors for different body parts
+    const colors = {
+        'reference': '#FFFFFF',
+        'neck': '#FF5722',
+        'trunk': '#2196F3',
+        'upper-leg': '#4CAF50',
+        'lower-leg': '#8BC34A',
+        'upper-arm': '#FFC107',
+        'lower-arm': '#FFEB3B',
+        'wrist': '#9C27B0'
+    };
+    
+    // Draw the line
+    ctx.strokeStyle = colors[toolType] || '#FFFFFF';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(point1.x, point1.y);
+    ctx.lineTo(point2.x, point2.y);
+    ctx.stroke();
+    
+    // Draw end points
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.beginPath();
+    ctx.arc(point1.x, point1.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(point2.x, point2.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Add label
+    const midX = (point1.x + point2.x) / 2;
+    const midY = (point1.y + point2.y) / 2;
+    ctx.fillStyle = 'black';
+    ctx.font = '12px Arial';
+    const labelMap = {
+        'reference': 'Reference',
+        'neck': 'Neck',
+        'trunk': 'Trunk',
+        'upper-leg': 'Upper Leg',
+        'lower-leg': 'Lower Leg',
+        'upper-arm': 'Upper Arm',
+        'lower-arm': 'Lower Arm',
+        'wrist': 'Wrist'
+    };
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1;
+    ctx.strokeText(labelMap[toolType], midX - 20, midY - 10);
+    ctx.fillText(labelMap[toolType], midX - 20, midY - 10);
+}
+
 // Set up event listeners
 function setupEventListeners() {
     // Image upload
