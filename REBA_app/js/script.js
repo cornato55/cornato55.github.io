@@ -101,7 +101,6 @@ function calculateAngle(point1, point2, toolType) {
     return angle;
 }
 
-// Add this function near the top of the script, after variable declarations
 function handleImageUpload(e) {
     console.log('handleImageUpload function called');
     const file = e.target.files[0];
@@ -112,15 +111,35 @@ function handleImageUpload(e) {
             uploadedImage.onload = function() {
                 console.log('Image loaded');
                 
-                // Resize canvas to match image dimensions
-                canvas.width = uploadedImage.width;
-                canvas.height = uploadedImage.height;
-                canvas.style.width = '100%';
-                canvas.style.maxWidth = uploadedImage.width + 'px';
+                // Get viewport dimensions (accounting for some UI elements)
+                const viewportWidth = window.innerWidth * 0.9; // 90% of window width
+                const viewportHeight = window.innerHeight * 0.8; // 80% of window height to account for UI elements
+                
+                // Calculate scaling factors
+                const scaleWidth = viewportWidth / uploadedImage.width;
+                const scaleHeight = viewportHeight / uploadedImage.height;
+                
+                // Use the smaller scaling factor to ensure image fits completely
+                const scale = Math.min(scaleWidth, scaleHeight, 1); // Don't upscale if image is already smaller
+                
+                // Set new dimensions
+                const newWidth = uploadedImage.width * scale;
+                const newHeight = uploadedImage.height * scale;
+                
+                // Resize canvas to match scaled image dimensions
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                canvas.style.width = newWidth + 'px';
+                canvas.style.height = newHeight + 'px';
                 
                 // Clear canvas and draw image
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(uploadedImage, 0, 0);
+                ctx.drawImage(uploadedImage, 0, 0, newWidth, newHeight);
+                
+                // Store original dimensions for future reference if needed
+                uploadedImage.originalWidth = uploadedImage.width;
+                uploadedImage.originalHeight = uploadedImage.height;
+                uploadedImage.scaleFactor = scale;
                 
                 // Reset drawing state
                 lines = {};
@@ -132,10 +151,11 @@ function handleImageUpload(e) {
                 selectTool('draw-reference');
                 updateCheckpoints('upload');
                 
-                console.log('Canvas setup complete');
+                console.log('Canvas setup complete with dimensions:', newWidth, 'x', newHeight);
+                console.log('Scale factor:', scale);
                 
-                // Force a redraw and recalculate scaling
-                resizeCanvas();
+                // Scroll to the canvas to ensure it's visible
+                canvas.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             };
             uploadedImage.onerror = function() {
                 console.error('Error loading image');
@@ -147,6 +167,36 @@ function handleImageUpload(e) {
         };
         reader.readAsDataURL(file);
     }
+}
+
+// Add touch event handlers for mobile support
+function setupTouchEventListeners() {
+    // Convert touch events to mouse events
+    canvas.addEventListener('touchstart', function(e) {
+        e.preventDefault(); // Prevent scrolling when touching the canvas
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+    }, false);
+    
+    canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+    }, false);
+    
+    canvas.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        const mouseEvent = new MouseEvent('mouseup', {});
+        canvas.dispatchEvent(mouseEvent);
+    }, false);
 }
 
 function startDrawing(e) {
@@ -393,16 +443,15 @@ function showAdjustmentPopup(toolType) {
   }
 
   // Build the popup HTML
-  popup.innerHTML = `
-    ${content}
-    <form id="adjustment-form">
-      ${controls}
-      <div class="button-group" style="margin-top: 20px; text-align: right;">
-        <button type="button" id="popup-skip" style="margin-right: 10px; padding: 8px 16px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;">Skip</button>
-        <button type="button" id="popup-save" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">Save</button>
-      </div>
-    </form>
-  `;
+popup.innerHTML = `
+  ${content}
+  <form id="adjustment-form">
+    ${controls}
+    <div class="button-group" style="margin-top: 20px; text-align: right;">
+      <button type="button" id="popup-next" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">Next</button>
+    </div>
+  </form>
+`;
 
   // Add the popup to the body
   document.body.appendChild(popup);
@@ -420,17 +469,12 @@ function showAdjustmentPopup(toolType) {
   document.body.appendChild(overlay);
 
   // Add event listeners to the buttons
-  document.getElementById('popup-skip').addEventListener('click', function() {
-    closePopup();
-    advanceToNextTool(toolType);
-  });
-
-  document.getElementById('popup-save').addEventListener('click', function() {
-    saveAdjustments(toolType);
-    closePopup();
-    advanceToNextTool(toolType);
-  });
-
+document.getElementById('popup-next').addEventListener('click', function() {
+  saveAdjustments(toolType);
+  closePopup();
+  advanceToNextTool(toolType);
+});
+  
   // Function to close the popup
   function closePopup() {
     document.body.removeChild(popup);
@@ -806,6 +850,9 @@ function setupEventListeners() {
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseleave', stopDrawing);
         
+        // Setup touch events for mobile
+        setupTouchEventListeners();
+        
         // Add other event listeners similarly
         const toolButtons = document.querySelectorAll('.tool-btn');
         toolButtons.forEach(btn => {
@@ -817,6 +864,14 @@ function setupEventListeners() {
         document.getElementById('clear-canvas').addEventListener('click', clearCanvas);
         document.getElementById('undo-last').addEventListener('click', undoLastLine);
         document.getElementById('calculate-btn').addEventListener('click', calculateREBA);
+        
+        // Add meta viewport tag for better mobile responsiveness if not already present
+        if (!document.querySelector('meta[name="viewport"]')) {
+            const metaViewport = document.createElement('meta');
+            metaViewport.name = 'viewport';
+            metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+            document.head.appendChild(metaViewport);
+        }
         
         console.log('All event listeners set up successfully');
     } catch (error) {
