@@ -171,10 +171,18 @@ function updateCheckpointForTool(toolType) {
 
 // Initialize Pyodide
 async function main() {
+    console.log('Main function started');
+    console.log('Document state:', document.readyState);
+    
     try {
+        // Ensure app container is visible
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+            appContainer.style.display = 'block';
+        }
+        
         // Load Pyodide
         document.getElementById('loading').style.display = 'block';
-        document.getElementById('app-container').style.display = 'none';
         
         const pyodide = await loadPyodide();
         window.pyodide = pyodide;
@@ -183,20 +191,23 @@ async function main() {
         await loadREBACalculator();
         
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('app-container').style.display = 'block';
         
         // Initialize canvas and event listeners
         initializeCanvas();
         setupEventListeners();
         
-        // Mark first step as complete if we got here
-        document.querySelector('[data-step="upload"]').classList.add('available');
+        // Mark first step as complete
+        const uploadStep = document.querySelector('[data-step="upload"]');
+        if (uploadStep) {
+            uploadStep.classList.add('available');
+        }
+        
+        console.log('Main initialization complete');
     } catch (error) {
         console.error("Failed to load Pyodide:", error);
         document.getElementById('loading').innerHTML = 'Error loading Python environment: ' + error.message;
     }
 }
-
 // Load Python code for REBA calculator
 async function loadREBACalculator() {
     try {
@@ -401,54 +412,62 @@ function setupEventListeners() {
 }
 
 function setupEventListeners() {
-    console.log('Setting up event listeners');
+    console.log('Document state:', document.readyState);
+    console.log('Attempting to set up event listeners');
     
-    // Check if elements exist before adding event listeners
-    const imageUpload = document.getElementById('image-upload');
-    const canvas = document.getElementById('canvas');
-    const clearCanvasBtn = document.getElementById('clear-canvas');
-    const undoLastBtn = document.getElementById('undo-last');
-    const calculateBtn = document.getElementById('calculate-btn');
+    // Log all elements to diagnose what's missing
+    console.log('Image Upload Element:', document.getElementById('image-upload'));
+    console.log('Canvas Element:', document.getElementById('canvas'));
+    console.log('App Container:', document.getElementById('app-container'));
     
-    if (imageUpload) {
+    // Comprehensive logging of all potential issues
+    try {
+        const imageUpload = document.getElementById('image-upload');
+        const canvas = document.getElementById('canvas');
+        const appContainer = document.getElementById('app-container');
+        
+        if (!appContainer) {
+            console.error('App container is missing!');
+            return;
+        }
+        
+        if (appContainer.style.display === 'none') {
+            console.warn('App container is hidden');
+        }
+        
+        if (!imageUpload) {
+            console.error('Image upload element is missing');
+            return;
+        }
+        
+        if (!canvas) {
+            console.error('Canvas element is missing');
+            return;
+        }
+        
+        // Proceed with event listener setup
         imageUpload.addEventListener('change', handleImageUpload);
-    } else {
-        console.error('Image upload element not found');
-    }
-    
-    if (canvas) {
+        
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', drawPreview);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseleave', stopDrawing);
-    } else {
-        console.error('Canvas element not found');
-    }
-    
-    // Tool selection buttons
-    const toolButtons = document.querySelectorAll('.tool-btn');
-    if (toolButtons.length > 0) {
+        
+        // Add other event listeners similarly
+        const toolButtons = document.querySelectorAll('.tool-btn');
         toolButtons.forEach(btn => {
             btn.addEventListener('click', function() {
-                console.log('Tool selected:', this.id);
                 selectTool(this.id);
             });
         });
-    } else {
-        console.error('No tool buttons found');
-    }
-    
-    // Other buttons
-    if (clearCanvasBtn) {
-        clearCanvasBtn.addEventListener('click', clearCanvas);
-    }
-    
-    if (undoLastBtn) {
-        undoLastBtn.addEventListener('click', undoLastLine);
-    }
-    
-    if (calculateBtn) {
-        calculateBtn.addEventListener('click', calculateREBA);
+        
+        document.getElementById('clear-canvas').addEventListener('click', clearCanvas);
+        document.getElementById('undo-last').addEventListener('click', undoLastLine);
+        document.getElementById('calculate-btn').addEventListener('click', calculateREBA);
+        
+        console.log('All event listeners set up successfully');
+    } catch (error) {
+        console.error('Error setting up event listeners:', error);
     }
 }
 
@@ -643,4 +662,8 @@ function displayREBAResults(result) {
     document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
 }
 
-document.addEventListener('DOMContentLoaded', main);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', main);
+} else {
+    main();
+}
