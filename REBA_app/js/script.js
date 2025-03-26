@@ -971,41 +971,41 @@ async function calculateREBA() {
     const forceScore = await window.pyodide.runPythonAsync(`calculate_force_score(${forceLevel}, ${shock})`);
     const couplingScore = await window.pyodide.runPythonAsync(`calculate_coupling_score(${coupling})`);
     const activityScore = await window.pyodide.runPythonAsync(`calculate_activity_score(${staticPosture}, ${repeatedActions}, ${rapidChanges})`);
-
+    
     // Debug - log the values to see if any are undefined or causing issues
     console.log("Calculated scores:", {
       neckScore, trunkScore, legsScore, upperArmScore, 
       lowerArmScore, wristScore, forceScore, couplingScore, activityScore
     });
     
-    // Calculate table scores directly using JavaScript
-    // I'll calculate Python scores directly to debug the issue
+    // Calculate final REBA score using more robust Python code
     const pythonCode = `
-# Create scores dictionary
-scores_dict = {
-  'neck': ${neckScore},
-  'trunk': ${trunkScore},
-  'legs': ${legsScore},
-  'force': ${forceScore},
-  'upper_arm': ${upperArmScore},
-  'lower_arm': ${lowerArmScore},
-  'wrist': ${wristScore},
-  'coupling': ${couplingScore},
-  'activity': ${activityScore}
-}
-
-# Calculate final results
-results = calculate_final_reba_score(scores_dict)
-
-# Ensure the risk_level exists
-if 'risk_level' not in results:
-    results['risk_level'] = "Risk level not calculated"
-
-# Print results for debugging
-print("Python calculation results:", results)
-
-# Return results
-results
+try:
+    # Create scores dictionary
+    scores_dict = {
+      'neck': ${neckScore},
+      'trunk': ${trunkScore},
+      'legs': ${legsScore},
+      'force': ${forceScore},
+      'upper_arm': ${upperArmScore},
+      'lower_arm': ${lowerArmScore},
+      'wrist': ${wristScore},
+      'coupling': ${couplingScore},
+      'activity': ${activityScore}
+    }
+    
+    # Calculate final results
+    results = calculate_final_reba_score(scores_dict)
+    
+    # Print debugging info
+    print("Final REBA results from Python:", results)
+    
+    # Return results
+    results
+except Exception as e:
+    # If there's an error, return a dictionary with error info
+    print("Python error:", str(e))
+    {'error': str(e), 'risk_level': 'Error calculating risk level'}
 `;
     
     const finalResults = await window.pyodide.runPythonAsync(pythonCode);
@@ -1045,63 +1045,77 @@ results
   }
 }
 
-// Display results in the UI
 function displayREBAResults(result) {
     // Show results section
     document.getElementById('results').style.display = 'block';
     
+    // Helper function to safely get values
+    function safeValue(value, defaultValue = 0) {
+        return value !== undefined && value !== null ? value : defaultValue;
+    }
+    
     // Update Group A scores
-    document.getElementById('neck-score').textContent = result.neck_score || 0;
-    document.getElementById('neck-angle-value').textContent = (result.neck_angle || 0).toFixed(1);
+    document.getElementById('neck-score').textContent = safeValue(result.neck_score);
+    document.getElementById('neck-angle-value').textContent = safeValue(result.neck_angle).toFixed(1);
     
-    document.getElementById('trunk-score').textContent = result.trunk_score || 0;
-    document.getElementById('trunk-angle-value').textContent = (result.trunk_angle || 0).toFixed(1);
+    document.getElementById('trunk-score').textContent = safeValue(result.trunk_score);
+    document.getElementById('trunk-angle-value').textContent = safeValue(result.trunk_angle).toFixed(1);
     
-    document.getElementById('legs-score').textContent = result.legs_score || 0;
-    document.getElementById('legs-angle-value').textContent = (result.legs_angle || 0).toFixed(1);
+    document.getElementById('legs-score').textContent = safeValue(result.legs_score);
+    document.getElementById('legs-angle-value').textContent = safeValue(result.legs_angle).toFixed(1);
     
-    document.getElementById('posture-a-score').textContent = result.posture_a || 0;
-    document.getElementById('force-score').textContent = result.force_score || 0;
-    document.getElementById('score-a').textContent = result.score_a || 0;
+    document.getElementById('posture-a-score').textContent = safeValue(result.posture_a);
+    document.getElementById('force-score').textContent = safeValue(result.force_score);
+    document.getElementById('score-a').textContent = safeValue(result.score_a);
     
     // Update Group B scores
-    document.getElementById('upper-arm-score').textContent = result.upper_arm_score || 0;
-    document.getElementById('upper-arm-angle-value').textContent = (result.upper_arm_angle || 0).toFixed(1);
+    document.getElementById('upper-arm-score').textContent = safeValue(result.upper_arm_score);
+    document.getElementById('upper-arm-angle-value').textContent = safeValue(result.upper_arm_angle).toFixed(1);
     
-    document.getElementById('lower-arm-score').textContent = result.lower_arm_score || 0;
-    document.getElementById('lower-arm-angle-value').textContent = (result.lower_arm_angle || 0).toFixed(1);
+    document.getElementById('lower-arm-score').textContent = safeValue(result.lower_arm_score);
+    document.getElementById('lower-arm-angle-value').textContent = safeValue(result.lower_arm_angle).toFixed(1);
     
-    document.getElementById('wrist-score').textContent = result.wrist_score || 0;
-    document.getElementById('wrist-angle-value').textContent = (result.wrist_angle || 0).toFixed(1);
+    document.getElementById('wrist-score').textContent = safeValue(result.wrist_score);
+    document.getElementById('wrist-angle-value').textContent = safeValue(result.wrist_angle).toFixed(1);
     
-    document.getElementById('posture-b-score').textContent = result.posture_b || 0;
-    document.getElementById('coupling-score').textContent = result.coupling_score || 0;
-    document.getElementById('score-b').textContent = result.score_b || 0;
+    document.getElementById('posture-b-score').textContent = safeValue(result.posture_b);
+    document.getElementById('coupling-score').textContent = safeValue(result.coupling_score);
+    document.getElementById('score-b').textContent = safeValue(result.score_b);
     
     // Update final scores
-    document.getElementById('table-c-score').textContent = result.table_c_score || 0;
-    document.getElementById('activity-score').textContent = result.activity_score || 0;
-    document.getElementById('final-score').textContent = result.final_score || 0;
+    document.getElementById('table-c-score').textContent = safeValue(result.table_c_score);
+    document.getElementById('activity-score').textContent = safeValue(result.activity_score);
+    document.getElementById('final-score').textContent = safeValue(result.final_score);
     
     // Update risk level with appropriate styling
     const riskLevelElement = document.getElementById('risk-level');
-    const riskLevel = result.risk_level || "Risk level not available";
-    riskLevelElement.textContent = riskLevel;
     
-    // Add risk level class for styling
+    // Default risk level text if none provided
+    let riskLevelText = "Risk level not available";
+    
+    // Only use the actual risk level if it exists and is a string
+    if (result && result.risk_level && typeof result.risk_level === 'string') {
+        riskLevelText = result.risk_level;
+    }
+    
+    riskLevelElement.textContent = riskLevelText;
+    
+    // Reset classes
     riskLevelElement.className = 'risk-level';
-    if (riskLevel && typeof riskLevel === 'string') {
-        if (riskLevel.includes("Very High")) {
+    
+    // Add appropriate risk class based on text content
+    if (typeof riskLevelText === 'string') {
+        if (riskLevelText.indexOf("Very High") >= 0) {
             riskLevelElement.classList.add('risk-very-high');
-        } else if (riskLevel.includes("High")) {
+        } else if (riskLevelText.indexOf("High") >= 0) {
             riskLevelElement.classList.add('risk-high');
-        } else if (riskLevel.includes("Medium")) {
+        } else if (riskLevelText.indexOf("Medium") >= 0) {
             riskLevelElement.classList.add('risk-medium');
         } else {
             riskLevelElement.classList.add('risk-low');
         }
     } else {
-        // Default styling if risk level is not a string
+        // Default styling
         riskLevelElement.classList.add('risk-low');
     }
     
