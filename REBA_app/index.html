@@ -2,12 +2,131 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REBA Assessment Tool - Collin D. Cortez</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
-    <link rel="stylesheet" href="./css/styles.css">
-
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+        }
+        header {
+            background-color: #1f1f1f;
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        nav li {
+            margin-right: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 300;
+            transition: color 0.3s ease;
+        }
+        nav a:hover {
+            color: #64b5f6;
+        }
+        main {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .container {
+            background-color: #1f1f1f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .drawing-area, .controls {
+            margin-bottom: 20px;
+        }
+        canvas {
+            max-width: 100%;
+            background-color: #2c2c2c;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #64b5f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #42a5f5;
+        }
+        button:disabled {
+            background-color: #4f4f4f;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            color: #64b5f6;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        .results {
+            background-color: #2c2c2c;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .score-section {
+            display: flex;
+            justify-content: space-between;
+        }
+        .score-box {
+            background-color: #1f1f1f;
+            border-radius: 4px;
+            padding: 15px;
+            width: 48%;
+        }
+        .final-score {
+            text-align: center;
+            font-size: 1.5em;
+            color: #64b5f6;
+            margin: 20px 0;
+        }
+        .risk-level {
+            text-align: center;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        input[type="file"] {
+            color: #e0e0e0;
+            background-color: #2c2c2c;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -57,7 +176,7 @@
                             <li data-step="legs"><span class="checkbox"></span> Draw leg lines</li>
                             <li data-step="arms"><span class="checkbox"></span> Draw arm lines</li>
                             <li data-step="wrist"><span class="checkbox"></span> Draw wrist line</li>
-                            <li data-step="adjustments"><span class="checkbox"></span> Complete Assessment</li>
+                            <li data-step="adjustments"><span class="checkbox"></span> Set adjustments</li>
                         </ol>
                         
                         <button id="calculate-btn" class="next-step" disabled>Calculate REBA Score</button>
