@@ -109,25 +109,31 @@ function handleImageUpload(e) {
         reader.onload = function(event) {
             uploadedImage = new Image();
             uploadedImage.onload = function() {
-                console.log('Image loaded');
+                console.log('Image loaded with dimensions:', uploadedImage.width, 'x', uploadedImage.height);
                 
                 // Get container dimensions
                 const container = canvas.parentElement;
-                const maxWidth = container.clientWidth * 0.95; // 95% of container width
-                const maxHeight = window.innerHeight * 0.6; // 60% of viewport height
+                const maxWidth = container.clientWidth;
+                const maxHeight = window.innerHeight * 0.6;
                 
                 // Calculate scale to fit within container
                 const scaleWidth = maxWidth / uploadedImage.width;
                 const scaleHeight = maxHeight / uploadedImage.height;
-                const scale = Math.min(scaleWidth, scaleHeight, 1); // Don't scale up small images
+                const scale = Math.min(scaleWidth, scaleHeight, 1);
                 
-                // Set canvas dimensions
-                canvas.width = uploadedImage.width * scale;
-                canvas.height = uploadedImage.height * scale;
+                // Calculate new dimensions
+                const scaledWidth = Math.floor(uploadedImage.width * scale);
+                const scaledHeight = Math.floor(uploadedImage.height * scale);
+                
+                // Set both internal canvas dimensions and CSS dimensions
+                canvas.width = scaledWidth;
+                canvas.height = scaledHeight;
+                canvas.style.width = scaledWidth + 'px';
+                canvas.style.height = scaledHeight + 'px';
                 
                 // Clear canvas and draw scaled image
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, scaledWidth, scaledHeight);
+                ctx.drawImage(uploadedImage, 0, 0, scaledWidth, scaledHeight);
                 
                 // Reset drawing state
                 lines = {};
@@ -139,12 +145,34 @@ function handleImageUpload(e) {
                 selectTool('draw-reference');
                 updateCheckpoints('upload');
                 
-                console.log('Canvas setup complete');
+                console.log('Canvas setup complete with scaled dimensions:', scaledWidth, 'x', scaledHeight);
             };
             uploadedImage.src = event.target.result;
         };
         reader.readAsDataURL(file);
     }
+}
+
+function getCanvasCoordinates(e) {
+    // First, check if this is a touch event
+    let clientX, clientY;
+    if (e.type.startsWith('touch')) {
+        const touch = e.touches[0] || e.changedTouches[0];
+        clientX = touch.clientX;
+        clientY = touch.clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    
+    // Get the canvas position
+    const rect = canvas.getBoundingClientRect();
+    
+    // Calculate coordinates - direct mapping without scaling
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    
+    return { x, y };
 }
 
 // Add touch event handlers for mobile support
@@ -185,35 +213,32 @@ function startDrawing(e) {
         console.log('No current tool selected');
         return;
     }
-
+    
     e.preventDefault();
-  
     isDrawing = true;
     
-    // Get canvas coordinates
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Get canvas coordinates using our helper function
+    const coords = getCanvasCoordinates(e);
     
-    console.log('Drawing start coordinates:', x, y);
+    console.log('Drawing start coordinates:', coords.x, coords.y);
     
     // Start a new line
-    points = [{x, y}];
+    points = [{x: coords.x, y: coords.y}];
     
     // Draw the first point
     ctx.fillStyle = 'red';
     ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.arc(coords.x, coords.y, 4, 0, Math.PI * 2);
     ctx.fill();
 }
 
 function drawPreview(e) {
     if (!isDrawing || points.length === 0) return;
     
+    e.preventDefault();
+    
     // Get canvas coordinates
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const coords = getCanvasCoordinates(e);
     
     // Redraw the image and all lines
     redrawCanvas();
@@ -224,56 +249,56 @@ function drawPreview(e) {
     ctx.setLineDash([5, 3]);
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
-    ctx.lineTo(x, y);
+    ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
     ctx.setLineDash([]);
 }
 
 function stopDrawing(e) {
-  if (!isDrawing || !currentTool) return;
+    if (!isDrawing || !currentTool) return;
   
-  // Get canvas coordinates
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  
-  // Add ending point
-  points.push({x, y});
-  
-  // Save the line
-  const toolType = currentTool.replace('draw-', '');
-  lines[toolType] = points.slice();
-  
-  // Calculate angle for this line
-  const angle = calculateAngle(points[0], points[1], toolType);
-  angles[toolType] = angle;
-  
-  // Draw final line
-  redrawCanvas();
-  drawLine(points[0], points[1], toolType);
-  
-  // Draw angle text
-  const midX = (points[0].x + points[1].x) / 2;
-  const midY = (points[0].y + points[1].y) / 2;
-  ctx.fillStyle = 'white';
-  ctx.strokeStyle = 'black';
-  ctx.lineWidth = 3;
-  ctx.font = '14px Arial';
-  ctx.strokeText(`${angle.toFixed(1)}°`, midX + 10, midY);
-  ctx.fillText(`${angle.toFixed(1)}°`, midX + 10, midY);
-  
-  // Reset drawing state
-  isDrawing = false;
-  points = [];
-  
-  // Enable undo button
-  document.getElementById('undo-last').disabled = false;
-  
-  // Update checkpoints
-  updateCheckpointForTool(toolType);
-  
-  // Show adjustment popup instead of auto-advancing
-  showAdjustmentPopup(toolType);
+    e.preventDefault();
+    
+    // Get canvas coordinates
+    const coords = getCanvasCoordinates(e);
+    
+    // Add ending point
+    points.push({x: coords.x, y: coords.y});
+    
+    // Save the line
+    const toolType = currentTool.replace('draw-', '');
+    lines[toolType] = points.slice();
+    
+    // Calculate angle for this line
+    const angle = calculateAngle(points[0], points[1], toolType);
+    angles[toolType] = angle;
+    
+    // Draw final line
+    redrawCanvas();
+    drawLine(points[0], points[1], toolType);
+    
+    // Draw angle text
+    const midX = (points[0].x + points[1].x) / 2;
+    const midY = (points[0].y + points[1].y) / 2;
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 3;
+    ctx.font = '14px Arial';
+    ctx.strokeText(`${angle.toFixed(1)}°`, midX + 10, midY);
+    ctx.fillText(`${angle.toFixed(1)}°`, midX + 10, midY);
+    
+    // Reset drawing state
+    isDrawing = false;
+    points = [];
+    
+    // Enable undo button
+    document.getElementById('undo-last').disabled = false;
+    
+    // Update checkpoints
+    updateCheckpointForTool(toolType);
+    
+    // Show adjustment popup
+    showAdjustmentPopup(toolType);
 }
 
 // Create a function to show the adjustment popup
