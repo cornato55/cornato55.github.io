@@ -978,36 +978,43 @@ async function calculateREBA() {
       lowerArmScore, wristScore, forceScore, couplingScore, activityScore
     });
     
-    // Create a dictionary of component scores to pass to the final calculation
-    const componentScores = {
-      'neck': neckScore,
-      'trunk': trunkScore,
-      'legs': legsScore,
-      'force': forceScore,
-      'upper_arm': upperArmScore,
-      'lower_arm': lowerArmScore,
-      'wrist': wristScore,
-      'coupling': couplingScore,
-      'activity': activityScore
-    };
+    // Calculate table scores directly using JavaScript
+    // I'll calculate Python scores directly to debug the issue
+    const pythonCode = `
+# Create scores dictionary
+scores_dict = {
+  'neck': ${neckScore},
+  'trunk': ${trunkScore},
+  'legs': ${legsScore},
+  'force': ${forceScore},
+  'upper_arm': ${upperArmScore},
+  'lower_arm': ${lowerArmScore},
+  'wrist': ${wristScore},
+  'coupling': ${couplingScore},
+  'activity': ${activityScore}
+}
+
+# Calculate final results
+results = calculate_final_reba_score(scores_dict)
+
+# Ensure the risk_level exists
+if 'risk_level' not in results:
+    results['risk_level'] = "Risk level not calculated"
+
+# Print results for debugging
+print("Python calculation results:", results)
+
+# Return results
+results
+`;
     
-    // Calculate final REBA score
-    const finalResults = await window.pyodide.runPythonAsync(`
-      calculate_final_reba_score(
-        ${neckScore}, 
-        ${trunkScore}, 
-        ${legsScore}, 
-        ${forceScore}, 
-        ${upperArmScore}, 
-        ${lowerArmScore}, 
-        ${wristScore}, 
-        ${couplingScore}, 
-        ${activityScore}
-      )
-    `);
+    const finalResults = await window.pyodide.runPythonAsync(pythonCode);
     
     // Convert Python dictionary to JavaScript object
     const jsResults = finalResults.toJs({create_proxies: false});
+    
+    // Log the results for debugging
+    console.log("Final REBA results:", jsResults);
     
     // Merge with angle values for display
     const displayResults = {
@@ -1019,6 +1026,11 @@ async function calculateREBA() {
       lower_arm_angle: lowerArmAngle,
       wrist_angle: wristAngle
     };
+    
+    // Ensure risk_level exists to prevent errors
+    if (!displayResults.risk_level) {
+      displayResults.risk_level = "Risk level not available";
+    }
     
     // Display results
     displayREBAResults(displayResults);
@@ -1039,51 +1051,57 @@ function displayREBAResults(result) {
     document.getElementById('results').style.display = 'block';
     
     // Update Group A scores
-    document.getElementById('neck-score').textContent = result.neck_score;
-    document.getElementById('neck-angle-value').textContent = result.neck_angle.toFixed(1);
+    document.getElementById('neck-score').textContent = result.neck_score || 0;
+    document.getElementById('neck-angle-value').textContent = (result.neck_angle || 0).toFixed(1);
     
-    document.getElementById('trunk-score').textContent = result.trunk_score;
-    document.getElementById('trunk-angle-value').textContent = result.trunk_angle.toFixed(1);
+    document.getElementById('trunk-score').textContent = result.trunk_score || 0;
+    document.getElementById('trunk-angle-value').textContent = (result.trunk_angle || 0).toFixed(1);
     
-    document.getElementById('legs-score').textContent = result.legs_score;
-    document.getElementById('legs-angle-value').textContent = result.legs_angle.toFixed(1);
+    document.getElementById('legs-score').textContent = result.legs_score || 0;
+    document.getElementById('legs-angle-value').textContent = (result.legs_angle || 0).toFixed(1);
     
-    document.getElementById('posture-a-score').textContent = result.posture_a;
-    document.getElementById('force-score').textContent = result.force_score;
-    document.getElementById('score-a').textContent = result.score_a;
+    document.getElementById('posture-a-score').textContent = result.posture_a || 0;
+    document.getElementById('force-score').textContent = result.force_score || 0;
+    document.getElementById('score-a').textContent = result.score_a || 0;
     
     // Update Group B scores
-    document.getElementById('upper-arm-score').textContent = result.upper_arm_score;
-    document.getElementById('upper-arm-angle-value').textContent = result.upper_arm_angle.toFixed(1);
+    document.getElementById('upper-arm-score').textContent = result.upper_arm_score || 0;
+    document.getElementById('upper-arm-angle-value').textContent = (result.upper_arm_angle || 0).toFixed(1);
     
-    document.getElementById('lower-arm-score').textContent = result.lower_arm_score;
-    document.getElementById('lower-arm-angle-value').textContent = result.lower_arm_angle.toFixed(1);
+    document.getElementById('lower-arm-score').textContent = result.lower_arm_score || 0;
+    document.getElementById('lower-arm-angle-value').textContent = (result.lower_arm_angle || 0).toFixed(1);
     
-    document.getElementById('wrist-score').textContent = result.wrist_score;
-    document.getElementById('wrist-angle-value').textContent = result.wrist_angle.toFixed(1);
+    document.getElementById('wrist-score').textContent = result.wrist_score || 0;
+    document.getElementById('wrist-angle-value').textContent = (result.wrist_angle || 0).toFixed(1);
     
-    document.getElementById('posture-b-score').textContent = result.posture_b;
-    document.getElementById('coupling-score').textContent = result.coupling_score;
-    document.getElementById('score-b').textContent = result.score_b;
+    document.getElementById('posture-b-score').textContent = result.posture_b || 0;
+    document.getElementById('coupling-score').textContent = result.coupling_score || 0;
+    document.getElementById('score-b').textContent = result.score_b || 0;
     
     // Update final scores
-    document.getElementById('table-c-score').textContent = result.table_c_score;
-    document.getElementById('activity-score').textContent = result.activity_score;
-    document.getElementById('final-score').textContent = result.final_score;
+    document.getElementById('table-c-score').textContent = result.table_c_score || 0;
+    document.getElementById('activity-score').textContent = result.activity_score || 0;
+    document.getElementById('final-score').textContent = result.final_score || 0;
     
     // Update risk level with appropriate styling
     const riskLevelElement = document.getElementById('risk-level');
-    riskLevelElement.textContent = result.risk_level;
+    const riskLevel = result.risk_level || "Risk level not available";
+    riskLevelElement.textContent = riskLevel;
     
     // Add risk level class for styling
     riskLevelElement.className = 'risk-level';
-    if (result.risk_level.includes("Very High")) {
-        riskLevelElement.classList.add('risk-very-high');
-    } else if (result.risk_level.includes("High")) {
-        riskLevelElement.classList.add('risk-high');
-    } else if (result.risk_level.includes("Medium")) {
-        riskLevelElement.classList.add('risk-medium');
+    if (riskLevel && typeof riskLevel === 'string') {
+        if (riskLevel.includes("Very High")) {
+            riskLevelElement.classList.add('risk-very-high');
+        } else if (riskLevel.includes("High")) {
+            riskLevelElement.classList.add('risk-high');
+        } else if (riskLevel.includes("Medium")) {
+            riskLevelElement.classList.add('risk-medium');
+        } else {
+            riskLevelElement.classList.add('risk-low');
+        }
     } else {
+        // Default styling if risk level is not a string
         riskLevelElement.classList.add('risk-low');
     }
     
