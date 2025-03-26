@@ -109,31 +109,22 @@ function handleImageUpload(e) {
         reader.onload = function(event) {
             uploadedImage = new Image();
             uploadedImage.onload = function() {
-                console.log('Image loaded with dimensions:', uploadedImage.width, 'x', uploadedImage.height);
+                console.log('Image loaded');
                 
-                // Get container dimensions
-                const container = canvas.parentElement;
-                const maxWidth = container.clientWidth;
-                const maxHeight = window.innerHeight * 0.6;
+                // Set canvas dimensions to the viewport size
+                const viewportWidth = window.innerWidth * 0.8; // 80% of window width
+                const viewportHeight = window.innerHeight * 0.7; // 70% of window height
                 
-                // Calculate scale to fit within container
-                const scaleWidth = maxWidth / uploadedImage.width;
-                const scaleHeight = maxHeight / uploadedImage.height;
-                const scale = Math.min(scaleWidth, scaleHeight, 1);
+                canvas.width = viewportWidth;
+                canvas.height = viewportHeight;
                 
-                // Calculate new dimensions
-                const scaledWidth = Math.floor(uploadedImage.width * scale);
-                const scaledHeight = Math.floor(uploadedImage.height * scale);
+                // Set CSS dimensions to match exactly
+                canvas.style.width = viewportWidth + 'px';
+                canvas.style.height = viewportHeight + 'px';
                 
-                // Set both internal canvas dimensions and CSS dimensions
-                canvas.width = scaledWidth;
-                canvas.height = scaledHeight;
-                canvas.style.width = scaledWidth + 'px';
-                canvas.style.height = scaledHeight + 'px';
-                
-                // Clear canvas and draw scaled image
-                ctx.clearRect(0, 0, scaledWidth, scaledHeight);
-                ctx.drawImage(uploadedImage, 0, 0, scaledWidth, scaledHeight);
+                // Draw the image stretched to the canvas size
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
                 
                 // Reset drawing state
                 lines = {};
@@ -145,7 +136,7 @@ function handleImageUpload(e) {
                 selectTool('draw-reference');
                 updateCheckpoints('upload');
                 
-                console.log('Canvas setup complete with scaled dimensions:', scaledWidth, 'x', scaledHeight);
+                console.log('Canvas setup complete with viewport dimensions:', canvas.width, 'x', canvas.height);
             };
             uploadedImage.src = event.target.result;
         };
@@ -213,22 +204,24 @@ function startDrawing(e) {
         console.log('No current tool selected');
         return;
     }
-    
+
     e.preventDefault();
     isDrawing = true;
     
-    // Get canvas coordinates using our helper function
-    const coords = getCanvasCoordinates(e);
+    // Get canvas coordinates directly
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
-    console.log('Drawing start coordinates:', coords.x, coords.y);
+    console.log('Drawing start coordinates:', x, y);
     
     // Start a new line
-    points = [{x: coords.x, y: coords.y}];
+    points = [{x, y}];
     
     // Draw the first point
     ctx.fillStyle = 'red';
     ctx.beginPath();
-    ctx.arc(coords.x, coords.y, 4, 0, Math.PI * 2);
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
     ctx.fill();
 }
 
@@ -237,8 +230,10 @@ function drawPreview(e) {
     
     e.preventDefault();
     
-    // Get canvas coordinates
-    const coords = getCanvasCoordinates(e);
+    // Get canvas coordinates directly - no scaling
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
     // Redraw the image and all lines
     redrawCanvas();
@@ -249,21 +244,23 @@ function drawPreview(e) {
     ctx.setLineDash([5, 3]);
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
-    ctx.lineTo(coords.x, coords.y);
+    ctx.lineTo(x, y);
     ctx.stroke();
     ctx.setLineDash([]);
 }
 
 function stopDrawing(e) {
     if (!isDrawing || !currentTool) return;
-  
+    
     e.preventDefault();
     
-    // Get canvas coordinates
-    const coords = getCanvasCoordinates(e);
+    // Get canvas coordinates directly - no scaling
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
     // Add ending point
-    points.push({x: coords.x, y: coords.y});
+    points.push({x, y});
     
     // Save the line
     const toolType = currentTool.replace('draw-', '');
