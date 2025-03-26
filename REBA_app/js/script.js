@@ -991,14 +991,23 @@ async function calculateREBA() {
       'activity': activityScore
     };
     
-    // Convert scores to a Python dictionary
-    const pyComponentScores = window.pyodide.toPy(componentScores);
-    
-    // Calculate final REBA score
-    const finalResults = await window.pyodide.runPythonAsync(
-      'calculate_final_reba_score(component_scores)',
-      {component_scores: pyComponentScores}
-    );
+    // Calculate final REBA score using Python code to create the dictionary properly
+    // This is the part that needs to be fixed
+    const finalResults = await window.pyodide.runPythonAsync(`
+      scores_dict = {
+        'neck': ${neckScore},
+        'trunk': ${trunkScore},
+        'legs': ${legsScore},
+        'force': ${forceScore},
+        'upper_arm': ${upperArmScore},
+        'lower_arm': ${lowerArmScore},
+        'wrist': ${wristScore},
+        'coupling': ${couplingScore},
+        'activity': ${activityScore}
+      }
+      result = calculate_final_reba_score(scores_dict)
+      result
+    `);
     
     // Convert Python dictionary to JavaScript object
     const jsResults = finalResults.toJs({create_proxies: false});
