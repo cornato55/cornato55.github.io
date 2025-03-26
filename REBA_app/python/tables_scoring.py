@@ -206,38 +206,33 @@ def get_risk_level(final_score):
         return "Low Risk. Change May Be Needed"
 
 
-def calculate_final_reba_score(component_scores):
+def calculate_final_reba_score(neck, trunk, legs, force, upper_arm, lower_arm, wrist, coupling, activity):
     """
-    Calculate the final REBA score from all component scores
+    Calculate the final REBA score from all individual component scores
     
     Args:
-        component_scores: Dictionary containing all component scores
+        neck: REBA score for neck (1-3)
+        trunk: REBA score for trunk (1-5)
+        legs: REBA score for legs (1-4)
+        force: Force/Load score (0-3)
+        upper_arm: REBA score for upper arm (1-6)
+        lower_arm: REBA score for lower arm (1-2)
+        wrist: REBA score for wrist (1-3)
+        coupling: Coupling score (0-3)
+        activity: Activity score (0-3)
         
     Returns:
         Dictionary with all intermediate calculations and the final REBA score
     """
-    # Extract individual scores from component_scores dictionary
-    neck_score = component_scores['neck']
-    trunk_score = component_scores['trunk']
-    legs_score = component_scores['legs']
-    force_score = component_scores['force']
-    
-    upper_arm_score = component_scores['upper_arm']
-    lower_arm_score = component_scores['lower_arm']
-    wrist_score = component_scores['wrist']
-    coupling_score = component_scores['coupling']
-    
-    activity_score = component_scores['activity']
-    
     # Calculate table scores
-    posture_a = calculate_table_a(neck_score, trunk_score, legs_score)
-    score_a = posture_a + force_score
+    posture_a = calculate_table_a(neck, trunk, legs)
+    score_a = posture_a + force
     
-    posture_b = calculate_table_b(upper_arm_score, lower_arm_score, wrist_score)
-    score_b = posture_b + coupling_score
+    posture_b = calculate_table_b(upper_arm, lower_arm, wrist)
+    score_b = posture_b + coupling
     
     table_c_score = calculate_table_c(score_a, score_b)
-    final_score = table_c_score + activity_score
+    final_score = table_c_score + activity
     
     # Determine risk level
     risk_level = get_risk_level(final_score)
