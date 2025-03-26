@@ -8,6 +8,8 @@ let referenceDirection = 'vertical';
 let previewLine = null;
 let angles = {};
 let uploadedImage = null;
+let drawingStep = 0; // 0: not drawing, 1: first point placed, waiting for second click
+let subjectFacingDirection = 'right'; // Default value, will be set by user
 
 let adjustments = {
   neck: { twisted: false, sideBending: false },
@@ -20,8 +22,67 @@ let adjustments = {
   activity: { staticPosture: false, repeatedActions: false, rapidChanges: false }
 };
 
+function synchronizeCanvasDimensions() {
+    // Make sure display and internal dimensions are correctly related
+    const displayWidth = parseFloat(canvas.style.width) || canvas.clientWidth;
+    const displayHeight = parseFloat(canvas.style.height) || canvas.clientHeight;
+    
+    // Ensure CSS values have 'px' units
+    if (!canvas.style.width.endsWith('px')) {
+        canvas.style.width = displayWidth + 'px';
+    }
+    if (!canvas.style.height.endsWith('px')) {
+        canvas.style.height = displayHeight + 'px';
+    }
+    
+    console.log(`Canvas synchronized - Display: ${displayWidth}x${displayHeight}, Internal: ${canvas.width}x${canvas.height}`);
+}
+
+function calculateUpperArmAngle(shoulderPoint, elbowPoint) {
+    // Get the trunk vector (assuming shoulder is at trunk[0] and hip is at trunk[1])
+    const trunkVector = {
+        x: lines['trunk'][0].x - lines['trunk'][1].x,
+        y: lines['trunk'][0].y - lines['trunk'][1].y
+    };
+    
+    // Get the upper arm vector
+    const upperArmVector = {
+        x: elbowPoint.x - shoulderPoint.x,
+        y: elbowPoint.y - shoulderPoint.y
+    };
+    
+    // Calculate the angle between vectors
+    const dotProduct = trunkVector.x * upperArmVector.x + trunkVector.y * upperArmVector.y;
+    const trunkMag = Math.sqrt(trunkVector.x * trunkVector.x + trunkVector.y * trunkVector.y);
+    const armMag = Math.sqrt(upperArmVector.x * upperArmVector.x + upperArmVector.y * upperArmVector.y);
+    
+    // Calculate the angle in degrees
+    let angle = Math.acos(dotProduct / (trunkMag * armMag)) * (180 / Math.PI);
+    
+    // Using cross product to determine if arm is in front or behind the trunk
+    const crossProduct = trunkVector.x * upperArmVector.y - trunkVector.y * upperArmVector.x;
+    
+    // Determine if the arm is in front (anterior) or behind (posterior)
+    const isArmInFront = (subjectFacingDirection === 'right' && crossProduct < 0) || 
+                          (subjectFacingDirection === 'left' && crossProduct > 0);
+    
+    // Return positive angle for anterior (in front) and negative for posterior (behind)
+    return isArmInFront ? angle : -angle;
+}
+
 // Calculate angle between two points for a specific body part
 function calculateAngle(point1, point2, toolType) {
+    // Don't calculate angle for reference line
+    if (toolType === 'reference') {
+        return 0;
+    }
+    
+    // Special case for upper arm
+    if (toolType === 'upper-arm' && lines['trunk']) {
+        return calculateUpperArmAngle(point1, point2);
+    }
+    
+    // For all other body parts, use the standard calculation
     // Calculate vector for this line
     const vector = {
         x: point2.x - point1.x,
@@ -68,8 +129,8 @@ function calculateAngle(point1, point2, toolType) {
             };
             refVector = upperLegVector;
         }
-    } else if (toolType === 'trunk' || toolType === 'upper-arm' || toolType === 'upper-leg') {
-        // These use the reference line or vertical
+    } else if (toolType === 'trunk' || toolType === 'upper-leg') {
+        // These use the reference line
         if (lines['reference']) {
             const referenceVector = {
                 x: lines['reference'][1].x - lines['reference'][0].x,
@@ -89,15 +150,20 @@ function calculateAngle(point1, point2, toolType) {
     // Calculate angle using dot product formula
     let angle = Math.acos(dotProduct / (vectorMag * refMag)) * (180 / Math.PI);
     
-    // For some measurements, we care about direction (e.g. flexion vs extension)
     // Use cross product to determine direction
     const crossProduct = vector.x * refVector.y - vector.y * refVector.x;
-    if (toolType === 'neck' || toolType === 'trunk') {
-        // For neck and trunk, negative angle means extension
-        if (crossProduct < 0) {
-            angle = -angle;
-        }
+    
+    // Adjust angle sign based on cross product
+    if (crossProduct < 0) {
+        angle = -angle;
     }
+    
+    // Fix trunk angle for right-facing subjects
+    if (toolType === 'trunk' && subjectFacingDirection === 'right') {
+        angle = -angle; // Invert the sign for trunk when subject faces right
+    }
+    
+    console.log(`${toolType} angle: ${angle.toFixed(1)}° (Subject facing: ${subjectFacingDirection})`);
     
     return angle;
 }
@@ -108,11 +174,12 @@ function calculateAngle(point1, point2, toolType) {
 function calculateNeckScore(angle, twisted = false, sideBending = false) {
     // Base score depends on flexion/extension angle
     let baseScore;
+    
     if (angle < 0) {  // Extension (backward)
         baseScore = 2;
     } else if (angle > 20) {  // Flexion > 20 degrees
         baseScore = 2;
-    } else {  // Flexion 0-20 degrees
+    } else {  // Flexion 0-20 degrees (always scores 1)
         baseScore = 1;
     }
     
@@ -124,20 +191,20 @@ function calculateNeckScore(angle, twisted = false, sideBending = false) {
         baseScore += 1;
     }
     
+    console.log(`Neck score: ${baseScore} (angle: ${angle.toFixed(1)}°)`);
     return baseScore;
 }
 
 // Trunk score calculation
 function calculateTrunkScore(angle, twisted = false, sideBending = false) {
-    // Determine base score from angle
+    // Determine base score from angle with 3° margin for upright position
     let baseScore;
-    if (-2.5 <= angle && angle <= 2.5) {  // Upright (near vertical)
+    
+    if (-3 <= angle && angle <= 3) {  // Upright (with 3° margin)
         baseScore = 1;
-    } else if (-20 <= angle && angle < -2.5) {  // Slight extension
+    } else if (angle < -3) {  // Extension
         baseScore = 2;
-    } else if (angle < -20) {  // Significant extension
-        baseScore = 3;
-    } else if (2.5 < angle && angle <= 20) {  // Slight flexion
+    } else if (3 < angle && angle <= 20) {  // Slight flexion
         baseScore = 2;
     } else if (20 < angle && angle < 60) {  // Moderate flexion
         baseScore = 3;
@@ -153,19 +220,20 @@ function calculateTrunkScore(angle, twisted = false, sideBending = false) {
         baseScore += 1;
     }
     
+    console.log(`Trunk score: ${baseScore} (angle: ${angle.toFixed(1)}°)`);
     return baseScore;
 }
 
 // Legs score calculation
 function calculateLegsScore(angle, legRaised = false) {
-    // Start with base score of 1
+    // Start with base score of 1 (bilateral weight bearing)
     let baseScore = 1;
     
     // Adjust score based on knee flexion
-    if (angle < 30) {
-        // Base score remains 1 for knee flexion < 30°
-    } else if (angle < 60) {
-        // Score of 2 for knee flexion 30-60°
+    if (angle <= 30) {
+        // Base score remains 1 for knee flexion ≤ 30°
+    } else if (angle <= 60) {
+        // Score of 2 for knee flexion 31-60°
         baseScore = 2;
     } else {
         // Score of 3 for knee flexion > 60°
@@ -177,6 +245,7 @@ function calculateLegsScore(angle, legRaised = false) {
         baseScore += 1;
     }
     
+    console.log(`Legs score: ${baseScore} (angle: ${angle.toFixed(1)}°)`);
     return baseScore;
 }
 
@@ -184,15 +253,16 @@ function calculateLegsScore(angle, legRaised = false) {
 function calculateUpperArmScore(angle, shoulderRaised = false, armAbducted = false, armSupported = false) {
     // Calculate base score from angle
     let baseScore;
-    if (angle < 0) {  // Arm extended behind body
+    
+    if (angle < -20) {  // Extension > 20°
         baseScore = 2;
-    } else if (angle <= 20) {  // Slight flexion
+    } else if (-20 <= angle && angle <= 20) {  // -20° to 20° (slight movement)
         baseScore = 1;
-    } else if (angle <= 45) {  // Moderate flexion
+    } else if (20 < angle && angle <= 45) {  // 21° to 45° flexion
         baseScore = 2;
-    } else if (angle <= 90) {  // High flexion
+    } else if (45 < angle && angle <= 90) {  // 46° to 90° flexion
         baseScore = 3;
-    } else {  // > 90 degrees extreme flexion
+    } else {  // > 90° flexion
         baseScore = 4;
     }
     
@@ -203,21 +273,26 @@ function calculateUpperArmScore(angle, shoulderRaised = false, armAbducted = fal
     if (armAbducted) {
         baseScore += 1;
     }
-    if (armSupported) {
-        baseScore -= 1;  // This is the only score reduction in REBA
+    if (armSupported || angle < 0) {  // Support or gravity assisted position
+        baseScore -= 1;
     }
     
     // Ensure minimum score of 1
-    return Math.max(1, baseScore);
+    baseScore = Math.max(1, baseScore);
+    
+    console.log(`Upper arm score: ${baseScore} (angle: ${angle.toFixed(1)}°)`);
+    return baseScore;
 }
 
 // Lower arm score calculation
 function calculateLowerArmScore(angle) {
-    // Ideal range is 60-100 degrees
+    // Optimal range is 60-100 degrees
     if (60 <= angle && angle <= 100) {
+        console.log(`Lower arm score: 1 (angle: ${angle.toFixed(1)}°)`);
         return 1;
     } else {
         // Either < 60 (too extended) or > 100 (too flexed)
+        console.log(`Lower arm score: 2 (angle: ${angle.toFixed(1)}°)`);
         return 2;
     }
 }
@@ -226,9 +301,10 @@ function calculateLowerArmScore(angle) {
 function calculateWristScore(angle, twisted = false) {
     // Base score depends on absolute angle (flexion or extension)
     let baseScore;
-    if (Math.abs(angle) <= 15) {  // Small angle
+    
+    if (Math.abs(angle) <= 15) {  // -15° to 15°
         baseScore = 1;
-    } else {  // Large angle
+    } else {  // > 15° in either direction
         baseScore = 2;
     }
     
@@ -237,7 +313,29 @@ function calculateWristScore(angle, twisted = false) {
         baseScore += 1;
     }
     
+    console.log(`Wrist score: ${baseScore} (angle: ${angle.toFixed(1)}°)`);
     return baseScore;
+}
+
+function logREBAScores(angles, scores) {
+    console.log("========== REBA SCORE CALCULATION ==========");
+    console.log(`Subject facing: ${subjectFacingDirection}`);
+    console.log(`Neck angle: ${angles.neck?.toFixed(1)}° → Score: ${scores.neck}`);
+    console.log(`Trunk angle: ${angles.trunk?.toFixed(1)}° → Score: ${scores.trunk}`);
+    console.log(`Legs angle: ${angles.legs?.toFixed(1)}° → Score: ${scores.legs}`);
+    console.log(`Upper arm angle: ${angles.upper_arm?.toFixed(1)}° → Score: ${scores.upper_arm}`);
+    console.log(`Lower arm angle: ${angles.lower_arm?.toFixed(1)}° → Score: ${scores.lower_arm}`);
+    console.log(`Wrist angle: ${angles.wrist?.toFixed(1)}° → Score: ${scores.wrist}`);
+    console.log(`Force/Load score: ${scores.force}`);
+    console.log(`Coupling score: ${scores.coupling}`);
+    console.log(`Activity score: ${scores.activity}`);
+    console.log(`Table A score: ${scores.posture_a}`);
+    console.log(`Score A: ${scores.score_a}`);
+    console.log(`Table B score: ${scores.posture_b}`);
+    console.log(`Score B: ${scores.score_b}`);
+    console.log(`Table C score: ${scores.table_c_score}`);
+    console.log(`FINAL REBA SCORE: ${scores.final_score} → ${scores.risk_level}`);
+    console.log("===========================================");
 }
 
 // Table A lookup function
@@ -426,7 +524,6 @@ function calculateFinalRebaScore(scores) {
     };
 }
 
-// Handle image upload
 function handleImageUpload(e) {
     console.log('handleImageUpload function called');
     const file = e.target.files[0];
@@ -437,32 +534,57 @@ function handleImageUpload(e) {
             uploadedImage.onload = function() {
                 console.log('Image loaded');
                 
-                // Set canvas dimensions to the viewport size
-                const viewportWidth = window.innerWidth * 0.8; // 80% of window width
-                const viewportHeight = window.innerHeight * 0.7; // 70% of window height
+                // Calculate container dimensions
+                const container = canvas.parentElement;
+                const containerWidth = container.clientWidth - 40; // Allow some padding
                 
-                canvas.width = viewportWidth;
-                canvas.height = viewportHeight;
+                // Calculate aspect ratio-preserving dimensions
+                const imageAspectRatio = uploadedImage.height / uploadedImage.width;
                 
-                // Set CSS dimensions to match exactly
-                canvas.style.width = viewportWidth + 'px';
-                canvas.style.height = viewportHeight + 'px';
+                // Set size based on container width while preserving aspect ratio
+                let canvasWidth = containerWidth;
+                let canvasHeight = Math.round(containerWidth * imageAspectRatio);
                 
-                // Draw the image stretched to the canvas size
+                // If too tall, scale down to fit viewport height
+                const maxHeight = window.innerHeight * 0.7;
+                if (canvasHeight > maxHeight) {
+                    canvasHeight = maxHeight;
+                    canvasWidth = Math.round(maxHeight / imageAspectRatio);
+                }
+                
+                // Set internal canvas dimensions (pixel resolution)
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+                
+                // Set display dimensions to match exactly
+                canvas.style.width = canvasWidth + 'px';
+                canvas.style.height = canvasHeight + 'px';
+                
+                // Ensure dimensions are synchronized
+                synchronizeCanvasDimensions();
+                
+                // Draw the image with proper aspect ratio
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+                ctx.drawImage(uploadedImage, 0, 0, canvasWidth, canvasHeight);
                 
                 // Reset drawing state
                 lines = {};
                 points = [];
                 angles = {};
+                drawingStep = 0;
                 
-                // Update UI
-                document.getElementById('instructions').textContent = 'Now draw a vertical reference line.';
-                selectTool('draw-reference');
-                updateCheckpoints('upload');
+                // Mark upload step as complete
+                const uploadItem = document.querySelector('[data-step="upload"]');
+                if (uploadItem) {
+                    uploadItem.classList.add('complete');
+                }
                 
-                console.log('Canvas setup complete with viewport dimensions:', canvas.width, 'x', canvas.height);
+                // Prompt for subject direction before proceeding
+                promptForSubjectDirection();
+                
+                // NOTE: The following steps will now be handled in the callbacks of promptForSubjectDirection()
+                
+                console.log('Canvas setup complete with proper aspect ratio:', canvas.width, 'x', canvas.height);
             };
             uploadedImage.src = event.target.result;
         };
@@ -470,7 +592,88 @@ function handleImageUpload(e) {
     }
 }
 
-// Get canvas coordinates
+function promptForSubjectDirection() {
+    // Create a popup overlay
+    const popup = document.createElement('div');
+    popup.className = 'direction-popup';
+    popup.style.position = 'fixed';
+    popup.style.top = '50%';
+    popup.style.left = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.style.backgroundColor = '#1f1f1f';
+    popup.style.color = '#e0e0e0';
+    popup.style.padding = '20px';
+    popup.style.borderRadius = '8px';
+    popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+    popup.style.zIndex = '1000';
+    popup.style.maxWidth = '90%';
+    popup.style.width = 'auto';
+    popup.style.textAlign = 'center';
+
+    // Create popup content
+    popup.innerHTML = `
+        <h3>Which direction is the subject facing?</h3>
+        <p>This helps calculate angles correctly.</p>
+        <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+            <button id="facing-left" style="padding: 10px 20px; background-color: #64b5f6; border: none; border-radius: 4px; color: white; cursor: pointer; margin: 5px;">Facing Left</button>
+            <button id="facing-right" style="padding: 10px 20px; background-color: #64b5f6; border: none; border-radius: 4px; color: white; cursor: pointer; margin: 5px;">Facing Right</button>
+        </div>
+    `;
+
+    // Add an overlay to prevent clicking outside
+    const overlay = document.createElement('div');
+    overlay.className = 'popup-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.zIndex = '999';
+    
+    // Add to document
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+
+    // Function to proceed with drawing reference line
+    function proceedToReferenceLineTool() {
+        // Update instruction text
+        document.getElementById('instructions').textContent = 'Draw a vertical reference line behind the subject.';
+        
+        // Automatically select the reference line tool
+        selectTool('draw-reference');
+        
+        // Update checkpoint status
+        updateCheckpoints('upload');
+        
+        // Make reference step available
+        const referenceItem = document.querySelector('[data-step="reference"]');
+        if (referenceItem) {
+            referenceItem.classList.add('available');
+        }
+    }
+
+    // Add event listeners to buttons
+    document.getElementById('facing-left').addEventListener('click', function() {
+        subjectFacingDirection = 'left';
+        document.body.removeChild(popup);
+        document.body.removeChild(overlay);
+        console.log('Subject direction set to: left');
+        // Proceed with drawing reference line
+        proceedToReferenceLineTool();
+    });
+
+    document.getElementById('facing-right').addEventListener('click', function() {
+        subjectFacingDirection = 'right';
+        document.body.removeChild(popup);
+        document.body.removeChild(overlay);
+        console.log('Subject direction set to: right');
+        // Proceed with drawing reference line
+        proceedToReferenceLineTool();
+    });
+}
+
+
 function getCanvasCoordinates(e) {
     // First, check if this is a touch event
     let clientX, clientY;
@@ -534,37 +737,99 @@ function startDrawing(e) {
     }
 
     e.preventDefault();
-    isDrawing = true;
     
-    // Get canvas coordinates directly
+    // Check if click is within canvas boundaries
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
     
-    console.log('Drawing start coordinates:', x, y);
+    // Ensure the click is within the canvas
+    if (clientX < rect.left || clientX > rect.right || 
+        clientY < rect.top || clientY > rect.bottom) {
+        console.log('Click outside canvas boundaries');
+        return;
+    }
     
-    // Start a new line
-    points = [{x, y}];
+    // Get canvas coordinates
+    const coordinates = getCanvasCoordinates(e);
+    const x = coordinates.x;
+    const y = coordinates.y;
     
-    // Draw the first point
-    ctx.fillStyle = 'red';
-    ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fill();
+    console.log('Drawing coordinates:', x, y, 'Step:', drawingStep);
+    
+    // First click - place first point
+    if (drawingStep === 0) {
+        // Start a new line
+        points = [{x, y}];
+        
+        // Draw the first point
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Update state
+        drawingStep = 1;
+        
+        console.log('First point placed');
+    } 
+    // Second click - complete the line
+    else if (drawingStep === 1) {
+        // Add second point
+        points.push({x, y});
+        
+        // Save the line
+        const toolType = currentTool.replace('draw-', '');
+        lines[toolType] = points.slice();
+        
+        // Calculate angle for this line
+        const angle = calculateAngle(points[0], points[1], toolType);
+        angles[toolType] = angle;
+        
+        // Draw final line
+        redrawCanvas();
+        drawLine(points[0], points[1], toolType);
+        
+        // Draw angle text
+        const midX = (points[0].x + points[1].x) / 2;
+        const midY = (points[0].y + points[1].y) / 2;
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.font = '14px Arial';
+        ctx.strokeText(`${angle.toFixed(1)}°`, midX + 10, midY);
+        ctx.fillText(`${angle.toFixed(1)}°`, midX + 10, midY);
+        
+        // Reset drawing state
+        drawingStep = 0;
+        points = [];
+        
+        // Enable undo button
+        document.getElementById('undo-last').disabled = false;
+        
+        // Update checkpoints
+        updateCheckpointForTool(toolType);
+        
+        // Show adjustment popup
+        showAdjustmentPopup(toolType);
+        
+        console.log('Line completed');
+    }
 }
 
 // Draw preview line
 function drawPreview(e) {
-    if (!isDrawing || points.length === 0) return;
+    // Only preview if first point is placed
+    if (drawingStep !== 1 || points.length === 0) return;
     
     e.preventDefault();
     
-    // Get canvas coordinates directly - no scaling
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Get canvas coordinates
+    const coordinates = getCanvasCoordinates(e);
+    const x = coordinates.x;
+    const y = coordinates.y;
     
-    // Redraw the image and all lines
+    // Redraw the canvas
     redrawCanvas();
     
     // Draw preview line
@@ -576,6 +841,12 @@ function drawPreview(e) {
     ctx.lineTo(x, y);
     ctx.stroke();
     ctx.setLineDash([]);
+    
+    // Redraw the first point for emphasis
+    ctx.fillStyle = 'red';
+    ctx.beginPath();
+    ctx.arc(points[0].x, points[0].y, 4, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 // Stop drawing and complete the line
@@ -584,10 +855,8 @@ function stopDrawing(e) {
     
     e.preventDefault();
     
-    // Get canvas coordinates directly - no scaling
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+	const coords = getCanvasCoordinates(e);
+    if (!coords) return;
     
     // Add ending point
     points.push({x, y});
@@ -626,6 +895,24 @@ function stopDrawing(e) {
     
     // Show adjustment popup
     showAdjustmentPopup(toolType);
+	
+	// If all measurements are complete, update instructions and highlight calculate button
+    if (toolType === 'wrist' && 
+        lines['reference'] && lines['neck'] && lines['trunk'] && 
+        lines['upper-leg'] && lines['lower-leg'] && 
+        lines['upper-arm'] && lines['lower-arm'] && lines['wrist']) {
+        
+        // Update instruction text
+        document.getElementById('instructions').textContent = 'All measurements complete. Click "Calculate REBA Score" to see results.';
+        
+        // Enable and highlight calculate button
+        const calculateBtn = document.getElementById('calculate-btn');
+        calculateBtn.disabled = false;
+        
+        // Scroll to the calculate button
+        calculateBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+	
 }
 
 // Show adjustment popup for additional factors
@@ -858,15 +1145,14 @@ function updateCheckpoints(step) {
         stepItem.classList.add('complete');
     }
     
-    // Make next step available
+    // Make next step available based on the defined sequence
     const nextSteps = {
         'upload': 'reference',
         'reference': 'neck',
         'neck': 'trunk',
         'trunk': 'legs',
         'legs': 'arms',
-        'arms': 'wrist',
-        'wrist': 'adjustments'
+        'arms': 'wrist'
     };
     
     const nextStep = nextSteps[step];
@@ -876,40 +1162,108 @@ function updateCheckpoints(step) {
             nextItem.classList.add('available');
         }
     }
+}
+
+
+function updateCheckpointForTool(toolType) {
+    // Directly mark the corresponding checkpoint as complete based on the tool used
+    if (toolType === 'reference') {
+        // Mark reference step as complete immediately
+        const referenceItem = document.querySelector('[data-step="reference"]');
+        if (referenceItem) {
+            referenceItem.classList.add('complete');
+        }
+        // Make neck step available
+        const neckItem = document.querySelector('[data-step="neck"]');
+        if (neckItem) {
+            neckItem.classList.add('available');
+        }
+    } else if (toolType === 'neck') {
+        // Mark neck step as complete immediately
+        const neckItem = document.querySelector('[data-step="neck"]');
+        if (neckItem) {
+            neckItem.classList.add('complete');
+        }
+        // Make trunk step available
+        const trunkItem = document.querySelector('[data-step="trunk"]');
+        if (trunkItem) {
+            trunkItem.classList.add('available');
+        }
+    } else if (toolType === 'trunk') {
+        // Mark trunk step as complete immediately
+        const trunkItem = document.querySelector('[data-step="trunk"]');
+        if (trunkItem) {
+            trunkItem.classList.add('complete');
+        }
+        // Make legs step available
+        const legsItem = document.querySelector('[data-step="legs"]');
+        if (legsItem) {
+            legsItem.classList.add('available');
+        }
+    } else if (toolType === 'lower-leg') {
+        // If both leg lines are drawn, mark legs as complete
+        if (lines['upper-leg'] && lines['lower-leg']) {
+            const legsItem = document.querySelector('[data-step="legs"]');
+            if (legsItem) {
+                legsItem.classList.add('complete');
+            }
+            // Make arms step available
+            const armsItem = document.querySelector('[data-step="arms"]');
+            if (armsItem) {
+                armsItem.classList.add('available');
+            }
+        }
+    } else if (toolType === 'lower-arm') {
+        // If both arm lines are drawn, mark arms as complete
+        if (lines['upper-arm'] && lines['lower-arm']) {
+            const armsItem = document.querySelector('[data-step="arms"]');
+            if (armsItem) {
+                armsItem.classList.add('complete');
+            }
+            // Make wrist step available
+            const wristItem = document.querySelector('[data-step="wrist"]');
+            if (wristItem) {
+                wristItem.classList.add('available');
+            }
+        }
+    } else if (toolType === 'wrist') {
+        // Mark wrist step as complete immediately
+        const wristItem = document.querySelector('[data-step="wrist"]');
+        if (wristItem) {
+            wristItem.classList.add('complete');
+        }
+        
+        // Update instruction text
+        document.getElementById('instructions').textContent = 'All measurements complete. Calculate REBA score.';
+        
+        // Enable calculate button
+        const calculateBtn = document.getElementById('calculate-btn');
+        calculateBtn.disabled = false;
+    }
     
-    // Enable calculation button if all required steps are complete
+    // Check if all required steps are complete
+    checkAllStepsComplete();
+}
+
+// Add this helper function to check if all steps are complete
+function checkAllStepsComplete() {
     if (lines['reference'] && lines['neck'] && lines['trunk'] && 
         lines['upper-leg'] && lines['lower-leg'] && 
         lines['upper-arm'] && lines['lower-arm'] && lines['wrist']) {
-     
-        document.getElementById('calculate-btn').disabled = false;
-     
-        // Mark adjustments step as available
-        const adjustmentsItem = document.querySelector('[data-step="adjustments"]');
-        if (adjustmentsItem) {
-            adjustmentsItem.classList.add('available');
-        }
-    }
-}
-
-// Update checkpoint for a specific tool
-function updateCheckpointForTool(toolType) {
-    if (toolType === 'reference') {
-        updateCheckpoints('upload');
-    } else if (toolType === 'neck') {
-        updateCheckpoints('reference');
-    } else if (toolType === 'trunk') {
-        updateCheckpoints('neck');
-    } else if (toolType === 'upper-leg' || toolType === 'lower-leg') {
-        if (lines['upper-leg'] && lines['lower-leg']) {
-            updateCheckpoints('trunk');
-        }
-    } else if (toolType === 'upper-arm' || toolType === 'lower-arm') {
-        if (lines['upper-arm'] && lines['lower-arm']) {
-            updateCheckpoints('legs');
-        }
-    } else if (toolType === 'wrist') {
-        updateCheckpoints('arms');
+        
+        // Make sure all checkpoints are marked as complete
+        document.querySelectorAll('.checkpoint-list li').forEach(li => {
+            if (li.dataset.step !== 'upload') { // Skip upload since it's handled differently
+                li.classList.add('complete');
+            }
+        });
+        
+        // Update instruction text
+        document.getElementById('instructions').textContent = 'All measurements complete. Calculate REBA score.';
+        
+        // Enable calculate button
+        const calculateBtn = document.getElementById('calculate-btn');
+        calculateBtn.disabled = false;
     }
 }
 
@@ -938,28 +1292,75 @@ function selectTool(toolId) {
         btn.classList.remove('selected');
     });
     
+    // Remove active class from all checkpoints
+    document.querySelectorAll('.checkpoint-list li').forEach(li => {
+        li.classList.remove('active');
+    });
+    
     // Set new tool
     currentTool = toolId;
     document.getElementById(toolId).classList.add('selected');
     
+    // Map tool ID to checkpoint step
+    const toolToStep = {
+        'draw-reference': 'reference',
+        'draw-neck': 'neck',
+        'draw-trunk': 'trunk',
+        'draw-upper-leg': 'legs',
+        'draw-lower-leg': 'legs',
+        'draw-upper-arm': 'arms',
+        'draw-lower-arm': 'arms',
+        'draw-wrist': 'wrist'
+    };
+    
+    // Highlight current step in checkpoint list
+    const step = toolToStep[toolId];
+    if (step) {
+        const stepItem = document.querySelector(`[data-step="${step}"]`);
+        if (stepItem) {
+            stepItem.classList.add('active');
+        }
+    }
+    
     // Update instructions
     updateInstructions(toolId);
+    
+    // Show drawing guidance
+    const toolType = toolId.replace('draw-', '');
+    showDrawingGuidance(toolType);
 }
 
 // Update instructions based on selected tool
 function updateInstructions(toolId) {
-    const instructions = {
-        'draw-reference': 'Draw a vertical reference line on the image (floor to ceiling).',
-        'draw-neck': 'Draw a line for the neck position.',
-        'draw-trunk': 'Draw a line for the trunk position.',
-        'draw-upper-leg': 'Draw a line for the upper leg.',
-        'draw-lower-leg': 'Draw a line for the lower leg.',
-        'draw-upper-arm': 'Draw a line for the upper arm.',
-        'draw-lower-arm': 'Draw a line for the lower arm.',
-        'draw-wrist': 'Draw a line for the wrist position.'
+    // Define instructions with subject direction context
+    const baseInstructions = {
+        'draw-reference': 'Draw a vertical reference line behind the subject (floor to ceiling).',
+        'draw-neck': 'Draw a line for the neck position, from the base of the neck to the top of the head.',
+        'draw-trunk': 'Draw a line for the trunk position, from the tailbone to the base of the neck.',
+        'draw-upper-leg': 'Draw a line for the upper leg, from the hip to the knee.',
+        'draw-lower-leg': 'Draw a line for the lower leg, from the knee to the ankle.',
+        'draw-upper-arm': 'Draw a line for the upper arm, from the shoulder to the elbow.',
+        'draw-lower-arm': 'Draw a line for the lower arm, from the elbow to the wrist.',
+        'draw-wrist': 'Draw a line for the wrist position, from the wrist to the end of the hand.'
     };
     
-    document.getElementById('instructions').textContent = instructions[toolId] || 'Select a tool to continue.';
+    // Get the base instruction
+    let instruction = baseInstructions[toolId] || 'Select a tool to continue.';
+    
+    // Add subject direction context
+    if (toolId && toolId !== 'draw-reference') {
+        instruction += ` (Subject facing ${subjectFacingDirection})`;
+    }
+    
+    // Check if all measurements are complete
+    if (lines['reference'] && lines['neck'] && lines['trunk'] && 
+        lines['upper-leg'] && lines['lower-leg'] && 
+        lines['upper-arm'] && lines['lower-arm'] && lines['wrist']) {
+        
+        instruction = 'All measurements complete. Click "Calculate REBA Score" to see results.';
+    }
+    
+    document.getElementById('instructions').textContent = instruction;
 }
 
 // Clear canvas and reset drawing state
@@ -971,6 +1372,8 @@ function clearCanvas() {
   lines = {};
   points = [];
   angles = {};
+  isDrawing = false;
+  drawingStep = 0;
   
   // Reset adjustments
   adjustments = {
@@ -1007,6 +1410,11 @@ function clearCanvas() {
 
 // Undo last drawn line
 function undoLastLine() {
+    // Reset drawing state in case we're in the middle of drawing
+    isDrawing = false;
+    drawingStep = 0;
+    points = [];
+    
     if (currentTool) {
         const toolType = currentTool.replace('draw-', '');
         if (lines[toolType]) {
@@ -1051,6 +1459,7 @@ function redrawCanvas() {
     }
 }
 
+// Draw a line for a specific body part
 // Draw a line for a specific body part
 function drawLine(point1, point2, toolType) {
     // Different colors for different body parts
@@ -1102,6 +1511,18 @@ function drawLine(point1, point2, toolType) {
     ctx.lineWidth = 1;
     ctx.strokeText(labelMap[toolType], midX - 20, midY - 10);
     ctx.fillText(labelMap[toolType], midX - 20, midY - 10);
+    
+    // Draw angle text - but only if not reference line
+    if (toolType !== 'reference' && angles[toolType] !== undefined) {
+        const midX = (point1.x + point2.x) / 2;
+        const midY = (point1.y + point2.y) / 2;
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.font = '14px Arial';
+        ctx.strokeText(`${angles[toolType].toFixed(1)}°`, midX + 10, midY);
+        ctx.fillText(`${angles[toolType].toFixed(1)}°`, midX + 10, midY);
+    }
 }
 
 // Initialize canvas
@@ -1120,6 +1541,8 @@ function initializeCanvas() {
     
     // Initial setup
     resizeCanvas();
+	
+	synchronizeCanvasDimensions();
 }
 
 // Resize canvas to maintain aspect ratio
@@ -1133,6 +1556,34 @@ function resizeCanvas() {
     // Only adjust the CSS size, not the canvas dimensions
     canvas.style.width = originalWidth + 'px';
     canvas.style.height = originalHeight + 'px';
+	
+	synchronizeCanvasDimensions();
+}
+
+// Add a visual indicator for the subject's orientation
+function createOrientationIndicator() {
+    // Create an indicator element showing which direction the subject should face
+    const indicator = document.createElement('div');
+    indicator.id = 'orientation-indicator';
+    indicator.style.position = 'absolute';
+    indicator.style.top = '10px';
+    indicator.style.right = '10px';
+    indicator.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    indicator.style.color = 'white';
+    indicator.style.padding = '5px 10px';
+    indicator.style.borderRadius = '4px';
+    indicator.style.fontSize = '14px';
+    indicator.style.zIndex = '900';
+    
+    // Set content based on direction
+    indicator.innerHTML = `Subject facing: <strong>${subjectFacingDirection}</strong>`;
+    
+    // Add to the drawing container
+    const container = document.querySelector('.drawing-area');
+    if (container) {
+        container.style.position = 'relative'; // Ensure positioned parent
+        container.appendChild(indicator);
+    }
 }
 
 // Set up event listeners
@@ -1175,12 +1626,46 @@ function setupEventListeners() {
         
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', drawPreview);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseleave', stopDrawing);
         
         // Setup touch events for mobile
         setupTouchEventListeners();
-        
+		
+		canvas.addEventListener('touchstart', function(e) {
+			e.preventDefault();
+			startDrawing(e);
+		}, { passive: false });
+		
+		canvas.addEventListener('touchmove', function(e) {
+			e.preventDefault();
+			drawPreview(e);
+		}, { passive: false });
+		
+		window.addEventListener('mousemove', function(e) {
+			if (isDrawing) {
+				drawPreview(e);
+			}
+		});
+    
+		window.addEventListener('mouseup', function(e) {
+			if (isDrawing) {
+				stopDrawing(e);
+			}
+		});
+		
+		// Add similar handlers for touch events on mobile
+		window.addEventListener('touchmove', function(e) {
+			if (isDrawing) {
+				e.preventDefault(); // Prevent scrolling while drawing
+				drawPreview(e);
+			}
+		}, { passive: false });
+		
+		window.addEventListener('touchend', function(e) {
+			if (isDrawing) {
+				stopDrawing(e);
+			}
+		});
+			
         // Add other event listeners similarly
         const toolButtons = document.querySelectorAll('.tool-btn');
         toolButtons.forEach(btn => {
@@ -1189,8 +1674,14 @@ function setupEventListeners() {
             });
         });
         
-        document.getElementById('clear-canvas').addEventListener('click', clearCanvas);
-        document.getElementById('undo-last').addEventListener('click', undoLastLine);
+        document.getElementById('clear-canvas').addEventListener('click', function() {
+			clearCanvas();
+			drawingStep = 0;
+		});
+        document.getElementById('undo-last').addEventListener('click', function() {
+			undoLastLine();
+			drawingStep = 0;
+		});
         document.getElementById('calculate-btn').addEventListener('click', calculateREBA);
         
         // Add meta viewport tag for better mobile responsiveness if not already present
@@ -1213,9 +1704,17 @@ function calculateREBA() {
         // Get angles from the drawn lines
         const neckAngle = angles['neck'] || 0;
         const trunkAngle = angles['trunk'] || 0;
+        
+        // For legs, calculate knee flexion angle
         const legsAngle = Math.abs(angles['lower-leg'] - angles['upper-leg']) || 0;
+        
+        // For upper arm, angle is relative to trunk
         const upperArmAngle = angles['upper-arm'] || 0;
+        
+        // For lower arm, angle is relative to upper arm
         const lowerArmAngle = Math.abs(angles['lower-arm'] - angles['upper-arm']) || 0;
+        
+        // For wrist, angle is relative to lower arm
         const wristAngle = Math.abs(angles['wrist'] - angles['lower-arm']) || 0;
         
         // Get adjustment values from the stored adjustments
@@ -1246,11 +1745,15 @@ function calculateREBA() {
         const couplingScore = calculateCouplingScore(coupling);
         const activityScore = calculateActivityScore(staticPosture, repeatedActions, rapidChanges);
         
-        // Debug - log the values
-        console.log("Calculated scores:", {
-            neckScore, trunkScore, legsScore, upperArmScore, 
-            lowerArmScore, wristScore, forceScore, couplingScore, activityScore
-        });
+        // Store all angles for display and debugging
+        const angleValues = {
+            neck: neckAngle,
+            trunk: trunkAngle,
+            legs: legsAngle,
+            upper_arm: upperArmAngle,
+            lower_arm: lowerArmAngle,
+            wrist: wristAngle
+        };
         
         // Calculate final REBA score
         const finalResults = calculateFinalRebaScore({
@@ -1265,8 +1768,8 @@ function calculateREBA() {
             activity: activityScore
         });
         
-        // Log the results for debugging
-        console.log("Final REBA results:", finalResults);
+        // Log all scores with angles for debugging
+        logREBAScores(angleValues, finalResults);
         
         // Merge with angle values for display
         const displayResults = {
@@ -1279,16 +1782,10 @@ function calculateREBA() {
             wrist_angle: wristAngle
         };
         
-        // Ensure risk_level exists to prevent errors
-        if (!displayResults.risk_level) {
-            displayResults.risk_level = "Risk level not available";
-        }
-        
         // Display results
         displayREBAResults(displayResults);
     } catch (error) {
         console.error("Error calculating REBA score:", error);
-        // More detailed error logging
         console.error("Error details:", {
             angles: JSON.stringify(angles),
             adjustments: JSON.stringify(adjustments)
@@ -1297,7 +1794,47 @@ function calculateREBA() {
     }
 }
 
-// Display REBA assessment results
+function downloadImageWithMeasurements() {
+    // Create a temporary link element
+    const link = document.createElement('a');
+    
+    // Get the canvas data as a data URL
+    const canvasData = canvas.toDataURL('image/png');
+    
+    // Set link attributes
+    link.download = 'reba_assessment.png';
+    link.href = canvasData;
+    
+    // Trigger the download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function addDownloadButton() {
+    // Create the button
+    const downloadButton = document.createElement('button');
+    downloadButton.id = 'download-image';
+    downloadButton.textContent = 'Download Image';
+    downloadButton.style.backgroundColor = '#64b5f6';
+    downloadButton.style.color = 'white';
+    downloadButton.style.border = 'none';
+    downloadButton.style.padding = '10px 15px';
+    downloadButton.style.borderRadius = '4px';
+    downloadButton.style.cursor = 'pointer';
+    downloadButton.style.margin = '10px';
+    
+    // Add event listener
+    downloadButton.addEventListener('click', downloadImageWithMeasurements);
+    
+    // Find a good place to add it - next to the clear canvas button
+    const clearCanvasButton = document.getElementById('clear-canvas');
+    if (clearCanvasButton && clearCanvasButton.parentNode) {
+        clearCanvasButton.parentNode.appendChild(downloadButton);
+    }
+}
+
+// displayREBAResults function for better presentation
 function displayREBAResults(result) {
     // Show results section
     document.getElementById('results').style.display = 'block';
@@ -1342,6 +1879,7 @@ function displayREBAResults(result) {
     
     // Update risk level with appropriate styling
     const riskLevelElement = document.getElementById('risk-level');
+    const riskDescriptionElement = document.getElementById('risk-description');
     
     // Default risk level text if none provided
     let riskLevelText = "Risk level not available";
@@ -1360,18 +1898,54 @@ function displayREBAResults(result) {
     if (typeof riskLevelText === 'string') {
         if (riskLevelText.indexOf("Very High") >= 0) {
             riskLevelElement.classList.add('risk-very-high');
+            riskDescriptionElement.textContent = "Score 11+ indicates very high risk. Implement changes immediately.";
         } else if (riskLevelText.indexOf("High") >= 0) {
             riskLevelElement.classList.add('risk-high');
+            riskDescriptionElement.textContent = "Score 8-10 indicates high risk. Investigate and implement changes soon.";
         } else if (riskLevelText.indexOf("Medium") >= 0) {
             riskLevelElement.classList.add('risk-medium');
+            riskDescriptionElement.textContent = "Score 4-7 indicates medium risk. Further investigation, change may be needed.";
         } else {
             riskLevelElement.classList.add('risk-low');
+            riskDescriptionElement.textContent = "Score 1-3 indicates low risk. May need minor changes.";
         }
     } else {
         // Default styling
         riskLevelElement.classList.add('risk-low');
     }
     
+    // Add explanation about subject direction
+    const directionInfo = document.createElement('p');
+    directionInfo.innerHTML = `<strong>Note:</strong> Analysis performed with subject facing ${subjectFacingDirection}.`;
+    directionInfo.style.marginTop = "20px";
+    directionInfo.style.fontStyle = "italic";
+    
+    // Find the risk description element and insert after it
+    if (riskDescriptionElement) {
+        riskDescriptionElement.after(directionInfo);
+    } else {
+        // If risk description element not found, append to results
+        document.getElementById('results').appendChild(directionInfo);
+    }
+    
+	const downloadButton = document.createElement('button');
+	downloadButton.textContent = 'Download Image with Measurements';
+	downloadButton.style.backgroundColor = '#64b5f6';
+	downloadButton.style.color = 'white';
+	downloadButton.style.border = 'none';
+	downloadButton.style.padding = '10px 20px';
+	downloadButton.style.borderRadius = '4px';
+	downloadButton.style.cursor = 'pointer';
+	downloadButton.style.marginTop = '20px';
+	downloadButton.style.marginRight = '10px';
+	downloadButton.onclick = downloadImageWithMeasurements;
+	
+	const buttonContainer = document.createElement('div');
+	buttonContainer.style.textAlign = 'center';
+	buttonContainer.style.marginTop = '20px';
+	buttonContainer.appendChild(downloadButton);
+	document.getElementById('results').appendChild(buttonContainer);
+	
     // Scroll to results
     document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
 }
@@ -1380,6 +1954,8 @@ function displayREBAResults(result) {
 function main() {
     console.log('Main function started');
     console.log('Document state:', document.readyState);
+	
+	addDownloadButton();
     
     try {
         // Ensure app container is visible
@@ -1404,6 +1980,8 @@ function main() {
             uploadStep.classList.add('available');
         }
         
+		synchronizeCanvasDimensions();
+		
         console.log('Main initialization complete');
     } catch (error) {
         console.error("Failed to initialize application:", error);
