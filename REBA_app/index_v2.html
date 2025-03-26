@@ -48,6 +48,76 @@
             margin: 40px auto;
             padding: 0 20px;
         }
+		
+		.tool-btn {
+			background-color: #64b5f6;
+			color: white;
+			transition: background-color 0.3s ease;
+		}
+
+		.tool-btn:hover {
+			background-color: #42a5f5;
+		}
+
+		.tool-btn.selected {
+			background-color: #FF5722; /* Bright orange for selected tool - more contrast */
+			box-shadow: 0 0 8px rgba(255, 87, 34, 0.8);
+			font-weight: bold;
+		}
+
+		/* Highlight active checkpoint */
+		.checkpoint-list li.active {
+			background-color: #3d5afe; /* Bright blue for active step */
+			color: white;
+			font-weight: bold;
+		}
+		
+		#calculate-btn {
+			background-color: #4CAF50; /* Green */
+			color: white;
+			font-size: 1.2em;
+			padding: 12px 24px;
+			border-radius: 6px;
+			margin-top: 20px;
+			display: block;
+			width: 100%;
+			max-width: 300px;
+			margin-left: auto;
+			margin-right: auto;
+			font-weight: bold;
+			box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+			transition: all 0.3s ease;
+		}
+
+		#calculate-btn:hover:not([disabled]) {
+			background-color: #45a049;
+			transform: translateY(-2px);
+			box-shadow: 0 6px 10px rgba(0,0,0,0.25);
+		}
+
+		#calculate-btn:disabled {
+			background-color: #cccccc;
+			color: #999999;
+			cursor: not-allowed;
+			box-shadow: none;
+		}
+
+		#calculate-btn:not([disabled]) {
+			animation: pulse 2s infinite;
+		}
+
+		@keyframes pulse {
+			0% {
+				box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+			}
+			70% {
+				box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+			}
+			100% {
+				box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+			}
+		}
+		
         h1 {
             font-size: 2.5em;
             color: #ffffff;
@@ -255,7 +325,6 @@
                             <li data-step="legs"><span class="checkbox"></span> Draw leg lines</li>
                             <li data-step="arms"><span class="checkbox"></span> Draw arm lines</li>
                             <li data-step="wrist"><span class="checkbox"></span> Draw wrist line</li>
-                            <li data-step="adjustments"><span class="checkbox"></span> Set adjustments</li>
                         </ol>
                         
                         <button id="calculate-btn" class="next-step" disabled>Calculate REBA Score</button>
@@ -307,3 +376,4 @@
     <script src="js/script_v2.js"></script>
 </body>
 </html>
+
