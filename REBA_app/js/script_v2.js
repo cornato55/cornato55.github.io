@@ -697,6 +697,7 @@ function getCanvasCoordinates(e) {
 }
 
 // Add touch event handlers for mobile support
+// Add touch event handlers for mobile support
 function setupTouchEventListeners() {
     // Convert touch events to mouse events
     canvas.addEventListener('touchstart', function(e) {
