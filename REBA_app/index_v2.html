@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REBA Assessment Tool - Collin D. Cortez</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
@@ -263,19 +263,82 @@
             font-weight: bold;
         }
         
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .score-section {
-                flex-direction: column;
-            }
-            .score-box {
-                width: 100%;
-            }
-            button {
-                padding: 8px 12px;
-                font-size: 0.9em;
-            }
-        }
+       /* Enhanced mobile responsiveness */
+@media (max-width: 768px) {
+    .score-section {
+        flex-direction: column;
+    }
+    
+    .score-box {
+        width: 100%;
+    }
+    
+    button {
+        padding: 8px 10px;
+        font-size: 0.9em;
+        margin: 3px;
+    }
+    
+    /* Improved button layout for mobile */
+    .drawing-area > div:nth-child(4) {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    /* Adjust canvas container */
+    canvas {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    h1 {
+        font-size: 1.8em;
+    }
+    
+    /* Make pop-ups responsive */
+    .results {
+        padding: 10px;
+        overflow-x: hidden;
+    }
+    
+    /* Make sure tool buttons don't overflow */
+    .tool-btn {
+        flex: 1 0 auto;
+        min-width: 80px;
+        max-width: calc(50% - 10px);
+    }
+    
+    /* Improve readability of instructions on mobile */
+    .step-instructions {
+        font-size: 0.9em;
+        padding: 10px;
+    }
+    
+    /* Ensure file input fits mobile screens */
+    input[type="file"] {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* General improvements for all screen sizes */
+button:active {
+    transform: scale(0.98);
+}
+
+/* Fix for pop-ups on all devices */
+.results {
+    overflow-y: auto;
+    max-height: 80vh;
+}
+
+/* Ensure canvas is always within bounds */
+canvas {
+    box-sizing: border-box;
+    display: block;
+    margin: 0 auto;
+}
     </style>
 </head>
 <body>
@@ -303,7 +366,7 @@
                         <input type="file" id="image-upload" accept="image/*" />
                         <button id="clear-canvas">Clear All</button>
                     </div>
-                    <canvas id="canvas" width="640" height="480"></canvas>
+                    <canvas id="canvas" width="640" height="480" style="touch-action: none;"></canvas>
                     <div>
                         <button id="draw-reference" class="tool-btn">Reference Line</button>
                         <button id="draw-neck" class="tool-btn">Neck Line</button>
