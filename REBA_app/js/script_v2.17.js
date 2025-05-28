@@ -1845,6 +1845,16 @@ function initializeMagnifier() {
     magnifierBubble = document.getElementById('magnifier-bubble');
     magnifierCanvas = document.getElementById('magnifier-canvas');
     
+    if (magnifierBubble) {
+        // Force hide the magnifier immediately
+        magnifierBubble.style.display = 'none';
+        magnifierBubble.style.visibility = 'hidden';
+        magnifierBubble.style.top = '-9999px';
+        magnifierBubble.style.left = '-9999px';
+        magnifierActive = false;
+        console.log('Magnifier hidden on init');
+    }
+    
     if (magnifierCanvas) {
         magnifierCtx = magnifierCanvas.getContext('2d');
         console.log('Magnifier initialized');
@@ -1868,8 +1878,9 @@ function showMagnifierBubble(e, coords) {
     // Position the bubble relative to the touch point
     positionMagnifierBubble(touch.clientX, touch.clientY);
     
-    // Show the bubble
+    // Show the bubble properly
     magnifierBubble.style.display = 'block';
+    magnifierBubble.style.visibility = 'visible';
     
     // Update bubble content
     updateMagnifierContent(coords);
@@ -1885,40 +1896,32 @@ function showMagnifierBubble(e, coords) {
     console.log('Magnifier bubble shown');
 }
 
-// Position magnifier bubble relative to touch coordinates
+// Position magnifier bubble directly above finger
 function positionMagnifierBubble(touchX, touchY) {
     if (!magnifierBubble) return;
     
     const bubbleSize = 120;
-    const offset = 30; // Distance from finger
+    const offsetY = 140; // Fixed distance above finger
     
-    // Default position: to the left and slightly up
-    let bubbleX = touchX - bubbleSize - offset;
-    let bubbleY = touchY - bubbleSize / 2;
+    // Center horizontally on finger, position above
+    let bubbleX = touchX - (bubbleSize / 2);
+    let bubbleY = touchY - offsetY;
     
-    // Check boundaries and adjust position
+    // Only adjust if going off screen edges
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
     
-    // If too far left, position to the right
+    // Keep within horizontal bounds
     if (bubbleX < 10) {
-        bubbleX = touchX + offset;
+        bubbleX = 10;
+    } else if (bubbleX + bubbleSize > screenWidth - 10) {
+        bubbleX = screenWidth - bubbleSize - 10;
     }
     
-    // If too far right, try positioning above or below
-    if (bubbleX + bubbleSize > screenWidth - 10) {
-        bubbleX = touchX - bubbleSize / 2;
-        // Position above if there's room, otherwise below
-        if (touchY > bubbleSize + offset) {
-            bubbleY = touchY - bubbleSize - offset; // Above
-        } else {
-            bubbleY = touchY + offset; // Below
-        }
+    // If too close to top, position below finger instead
+    if (bubbleY < 10) {
+        bubbleY = touchY + 30; // Below finger
     }
-    
-    // Final boundary checks
-    bubbleX = Math.max(10, Math.min(screenWidth - bubbleSize - 10, bubbleX));
-    bubbleY = Math.max(10, Math.min(screenHeight - bubbleSize - 10, bubbleY));
     
     // Apply the position
     magnifierBubble.style.left = bubbleX + 'px';
@@ -2013,10 +2016,12 @@ function drawPreviewInMagnifier(coords) {
 function hideMagnifierBubble() {
     if (magnifierBubble) {
         magnifierBubble.style.display = 'none';
+        magnifierBubble.style.visibility = 'hidden';
+        magnifierBubble.style.top = '-9999px';
+        magnifierBubble.style.left = '-9999px';
     }
     magnifierActive = false;
-	consol.log('Magnifier Hidden');
-    
+    console.log('Magnifier hidden');
 }
 
 function clearCanvas() {
