@@ -1835,6 +1835,188 @@ function toggleScoreDetails() {
     }
 }
 
+// Initialize magnifier bubble elements
+function initializeMagnifier() {
+    magnifierBubble = document.getElementById('magnifier-bubble');
+    magnifierCanvas = document.getElementById('magnifier-canvas');
+    
+    if (magnifierCanvas) {
+        magnifierCtx = magnifierCanvas.getContext('2d');
+        console.log('Magnifier initialized');
+    } else {
+        console.error('Magnifier canvas not found');
+    }
+}
+
+// Show magnification bubble
+function showMagnifierBubble(e, coords) {
+    if (!magnifierBubble || !magnifierCanvas || !magnifierCtx) {
+        console.error('Magnifier not initialized');
+        return;
+    }
+    
+    magnifierActive = true;
+    
+    // Get the current touch position
+    const touch = e.touches[0];
+    
+    // Position the bubble relative to the touch point
+    positionMagnifierBubble(touch.clientX, touch.clientY);
+    
+    // Show the bubble
+    magnifierBubble.style.display = 'block';
+    
+    // Update bubble content
+    updateMagnifierContent(coords);
+    
+    // Update info text
+    const info = document.getElementById('magnifier-info');
+    if (drawingStep === 0) {
+        info.textContent = 'Release to place first point';
+    } else {
+        info.textContent = 'Release to complete line';
+    }
+    
+    console.log('Magnifier bubble shown');
+}
+
+// Position magnifier bubble relative to touch coordinates
+function positionMagnifierBubble(touchX, touchY) {
+    if (!magnifierBubble) return;
+    
+    const bubbleSize = 120;
+    const offset = 30; // Distance from finger
+    
+    // Default position: to the left and slightly up
+    let bubbleX = touchX - bubbleSize - offset;
+    let bubbleY = touchY - bubbleSize / 2;
+    
+    // Check boundaries and adjust position
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // If too far left, position to the right
+    if (bubbleX < 10) {
+        bubbleX = touchX + offset;
+    }
+    
+    // If too far right, try positioning above or below
+    if (bubbleX + bubbleSize > screenWidth - 10) {
+        bubbleX = touchX - bubbleSize / 2;
+        // Position above if there's room, otherwise below
+        if (touchY > bubbleSize + offset) {
+            bubbleY = touchY - bubbleSize - offset; // Above
+        } else {
+            bubbleY = touchY + offset; // Below
+        }
+    }
+    
+    // Final boundary checks
+    bubbleX = Math.max(10, Math.min(screenWidth - bubbleSize - 10, bubbleX));
+    bubbleY = Math.max(10, Math.min(screenHeight - bubbleSize - 10, bubbleY));
+    
+    // Apply the position
+    magnifierBubble.style.left = bubbleX + 'px';
+    magnifierBubble.style.top = bubbleY + 'px';
+    
+    console.log(`Magnifier positioned at: ${bubbleX}, ${bubbleY} (touch at: ${touchX}, ${touchY})`);
+}
+
+// Update magnifier bubble position and content
+function updateMagnifierBubble(e, coords) {
+    if (!magnifierActive || !magnifierBubble) return;
+    
+    // Get current touch position and reposition the bubble
+    const touch = e.touches[0];
+    positionMagnifierBubble(touch.clientX, touch.clientY);
+    
+    // Update content
+    updateMagnifierContent(coords);
+}
+
+// Update the content inside the magnifier bubble
+function updateMagnifierContent(coords) {
+    if (!magnifierCtx || !uploadedImage) return;
+    
+    // Clear magnifier canvas
+    magnifierCtx.clearRect(0, 0, 120, 120);
+    
+    // Calculate area to magnify (60x60 pixel area around touch point)
+    const sourceSize = 40; // Size of area to magnify from main canvas
+    const sourceX = Math.max(0, Math.min(canvas.width - sourceSize, coords.x - sourceSize/2));
+    const sourceY = Math.max(0, Math.min(canvas.height - sourceSize, coords.y - sourceSize/2));
+    
+    // Draw magnified portion of the image
+    magnifierCtx.drawImage(
+        canvas,
+        sourceX, sourceY, sourceSize, sourceSize, // Source area
+        0, 0, 120, 120 // Destination (full magnifier)
+    );
+    
+    // Draw existing points if any
+    if (drawingStep === 1 && points.length > 0) {
+        const firstPoint = points[0];
+        // Check if first point is in visible area
+        if (firstPoint.x >= sourceX && firstPoint.x <= sourceX + sourceSize &&
+            firstPoint.y >= sourceY && firstPoint.y <= sourceY + sourceSize) {
+            
+            const magnifiedX = ((firstPoint.x - sourceX) / sourceSize) * 120;
+            const magnifiedY = ((firstPoint.y - sourceY) / sourceSize) * 120;
+            
+            magnifierCtx.fillStyle = 'red';
+            magnifierCtx.beginPath();
+            magnifierCtx.arc(magnifiedX, magnifiedY, 4, 0, Math.PI * 2);
+            magnifierCtx.fill();
+        }
+    }
+}
+
+// Draw preview line in magnifier for second point
+function drawPreviewInMagnifier(coords) {
+    if (!magnifierCtx || points.length === 0) return;
+    
+    // Redraw magnifier content first
+    updateMagnifierContent(coords);
+    
+    const sourceSize = 40;
+    const sourceX = Math.max(0, Math.min(canvas.width - sourceSize, coords.x - sourceSize/2));
+    const sourceY = Math.max(0, Math.min(canvas.height - sourceSize, coords.y - sourceSize/2));
+    
+    const firstPoint = points[0];
+    
+    // Draw preview line if first point is visible
+    if (firstPoint.x >= sourceX && firstPoint.x <= sourceX + sourceSize &&
+        firstPoint.y >= sourceY && firstPoint.y <= sourceY + sourceSize) {
+        
+        const startX = ((firstPoint.x - sourceX) / sourceSize) * 120;
+        const startY = ((firstPoint.y - sourceY) / sourceSize) * 120;
+        const endX = ((coords.x - sourceX) / sourceSize) * 120;
+        const endY = ((coords.y - sourceY) / sourceSize) * 120;
+        
+        magnifierCtx.strokeStyle = 'red';
+        magnifierCtx.lineWidth = 2;
+        magnifierCtx.setLineDash([3, 2]);
+        magnifierCtx.beginPath();
+        magnifierCtx.moveTo(startX, startY);
+        magnifierCtx.lineTo(endX, endY);
+        magnifierCtx.stroke();
+        magnifierCtx.setLineDash([]);
+    }
+}
+
+// Hide magnification bubble
+function hideMagnifierBubble() {
+    if (magnifierBubble) {
+        magnifierBubble.style.display = 'none';
+    }
+    magnifierActive = false;
+    
+    if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+    }
+}
+
 function clearCanvas() {
 	// Clear canvas
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2413,71 +2595,140 @@ function handleMouseUp(e) {
 
 function handleTouchStart(e) {
     e.preventDefault();
-    if (!currentTool || drawingStep !== 0) return;
+    console.log('Touch start - current tool:', currentTool, 'drawing step:', drawingStep);
+    
+    if (!currentTool) {
+        console.log('Touch start ignored - no tool selected');
+        return;
+    }
     
     const coords = getCanvasCoordinates(e);
-    if (!coords) return;
+    if (!coords) {
+        console.log('Touch start - no valid coordinates');
+        return;
+    }
     
-    points = [coords];
-    drawingStep = 1;
-    isDrawing = true;
-    
-    // Draw first point
-    ctx.fillStyle = 'red';
-    ctx.beginPath();
-    ctx.arc(coords.x, coords.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    
-    console.log('Touch: First point placed at:', coords.x, coords.y);
+    // Start hold timer for magnification bubble
+    startHoldTimer(e, coords);
 }
 
 function handleTouchMove(e) {
     e.preventDefault();
-    if (drawingStep !== 1 || !isDrawing) return;
     
     const coords = getCanvasCoordinates(e);
     if (!coords) return;
     
-    // Show preview line
-    redrawCanvas();
-    
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([5, 3]);
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    ctx.lineTo(coords.x, coords.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    
-    // Redraw first point
-    ctx.fillStyle = 'red';
-    ctx.beginPath();
-    ctx.arc(points[0].x, points[0].y, 6, 0, Math.PI * 2);
-    ctx.fill();
+    if (magnifierActive) {
+        // Update magnifier bubble position and content
+        updateMagnifierBubble(e, coords);
+        
+        // If we're drawing the second point, show preview line in magnifier
+        if (drawingStep === 1 && points.length > 0) {
+            drawPreviewInMagnifier(coords);
+        }
+    } else {
+        // Cancel hold timer if moving too much
+        if (holdTimer) {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+        }
+        
+        // Restart hold timer at new position
+        startHoldTimer(e, coords);
+    }
 }
 
 function handleTouchEnd(e) {
     e.preventDefault();
-    if (drawingStep !== 1 || !isDrawing || !currentTool) return;
+    console.log('Touch end - drawing step:', drawingStep, 'magnifier active:', magnifierActive);
     
-    const touch = e.changedTouches[0];
-    if (!touch) return;
+    // Clear hold timer
+    if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+    }
     
-    const rect = canvas.getBoundingClientRect();
-    const coords = {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top
-    };
-    
-    // Make sure we moved at least 10 pixels
-    const distance = Math.sqrt(Math.pow(coords.x - points[0].x, 2) + Math.pow(coords.y - points[0].y, 2));
-    if (distance < 10) {
-        console.log('Touch: Line too short, ignoring');
+    if (!magnifierActive) {
+        console.log('Touch end - magnifier not active, ignoring');
+        hideMagnifierBubble();
         return;
     }
     
-    finishLine(coords);
+    const touch = e.changedTouches[0];
+    if (!touch) {
+        hideMagnifierBubble();
+        return;
+    }
+    
+    const coords = getCanvasCoordinates({ 
+        type: 'touchend', 
+        changedTouches: [touch] 
+    });
+    
+    if (!coords) {
+        hideMagnifierBubble();
+        return;
+    }
+    
+    // Place the point
+    placeTouchPoint(coords);
+    hideMagnifierBubble();
+}
+
+// Start timer for showing magnification bubble
+function startHoldTimer(e, coords) {
+    // Clear any existing timer
+    if (holdTimer) {
+        clearTimeout(holdTimer);
+    }
+    
+    // Store the touch event and coordinates for later use
+    const savedEvent = {
+        touches: [{ 
+            clientX: e.touches[0].clientX, 
+            clientY: e.touches[0].clientY 
+        }]
+    };
+    const savedCoords = { ...coords };
+    
+    holdTimer = setTimeout(() => {
+        // Show magnifier using saved event and coordinates
+        showMagnifierBubble(savedEvent, savedCoords);
+    }, touchHoldDelay);
+}
+
+// Place a point when touch ends
+function placeTouchPoint(coords) {
+    if (drawingStep === 0) {
+        // First point
+        points = [coords];
+        drawingStep = 1;
+        isDrawing = true;
+        
+        // Draw first point on main canvas
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(coords.x, coords.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        console.log('Touch: First point placed at:', coords.x, coords.y);
+        
+    } else if (drawingStep === 1 && points.length > 0) {
+        // Second point - complete the line
+        const distance = Math.sqrt(Math.pow(coords.x - points[0].x, 2) + Math.pow(coords.y - points[0].y, 2));
+        
+        if (distance < 15) {
+            console.log('Touch: Line too short, ignoring. Distance:', distance);
+            // Reset state
+            drawingStep = 0;
+            isDrawing = false;
+            points = [];
+            redrawCanvas();
+            return;
+        }
+        
+        finishLine(coords);
+    }
 }
 
 function finishLine(coords) {
@@ -2942,7 +3193,7 @@ function main() {
     console.log('Starting main initialization');
     
 	setupCompactButtons();
-	//setupEventListeners();
+	
 	
     try {
         // Make app container visible
@@ -2971,6 +3222,7 @@ function main() {
         if (uploadStep) {
             uploadStep.classList.add('available');
         }
+		initializeMagnifier();
         
         console.log('Main initialization complete');
     } catch (error) {
