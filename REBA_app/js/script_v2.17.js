@@ -10,6 +10,11 @@ let angles = {};
 let uploadedImage = null;
 let drawingStep = 0; // 0: not drawing, 1: first point placed, waiting for second click
 let subjectFacingDirection = 'right'; // Default value, will be set by user
+let magnifierBubble = null;
+let magnifierCanvas = null;
+let magnifierCtx = null;
+let magnifierActive = false;
+let bubbleScale = 3;
 
 let adjustments = {
   neck: { twisted: false, sideBending: false },
@@ -2010,11 +2015,8 @@ function hideMagnifierBubble() {
         magnifierBubble.style.display = 'none';
     }
     magnifierActive = false;
+	consol.log('Magnifier Hidden');
     
-    if (holdTimer) {
-        clearTimeout(holdTimer);
-        holdTimer = null;
-    }
 }
 
 function clearCanvas() {
@@ -2608,8 +2610,10 @@ function handleTouchStart(e) {
         return;
     }
     
-    // Start hold timer for magnification bubble
-    startHoldTimer(e, coords);
+    console.log('Touch start coordinates:', coords);
+    
+    // Show magnifier immediately on touch
+    showMagnifierBubble(e, coords);
 }
 
 function handleTouchMove(e) {
@@ -2626,15 +2630,6 @@ function handleTouchMove(e) {
         if (drawingStep === 1 && points.length > 0) {
             drawPreviewInMagnifier(coords);
         }
-    } else {
-        // Cancel hold timer if moving too much
-        if (holdTimer) {
-            clearTimeout(holdTimer);
-            holdTimer = null;
-        }
-        
-        // Restart hold timer at new position
-        startHoldTimer(e, coords);
     }
 }
 
@@ -2642,11 +2637,35 @@ function handleTouchEnd(e) {
     e.preventDefault();
     console.log('Touch end - drawing step:', drawingStep, 'magnifier active:', magnifierActive);
     
-    // Clear hold timer
-    if (holdTimer) {
-        clearTimeout(holdTimer);
-        holdTimer = null;
+    if (!magnifierActive) {
+        console.log('Touch end - magnifier not active, ignoring');
+        return;
     }
+    
+    const touch = e.changedTouches[0];
+    if (!touch) {
+        hideMagnifierBubble();
+        return;
+    }
+    
+    const coords = getCanvasCoordinates({ 
+        type: 'touchend', 
+        changedTouches: [touch] 
+    });
+    
+    if (!coords) {
+        hideMagnifierBubble();
+        return;
+    }
+    
+    // Place the point
+    placeTouchPoint(coords);
+    hideMagnifierBubble();
+}
+
+function handleTouchEnd(e) {
+    e.preventDefault();
+    console.log('Touch end - drawing step:', drawingStep, 'magnifier active:', magnifierActive);
     
     if (!magnifierActive) {
         console.log('Touch end - magnifier not active, ignoring');
@@ -2675,27 +2694,6 @@ function handleTouchEnd(e) {
     hideMagnifierBubble();
 }
 
-// Start timer for showing magnification bubble
-function startHoldTimer(e, coords) {
-    // Clear any existing timer
-    if (holdTimer) {
-        clearTimeout(holdTimer);
-    }
-    
-    // Store the touch event and coordinates for later use
-    const savedEvent = {
-        touches: [{ 
-            clientX: e.touches[0].clientX, 
-            clientY: e.touches[0].clientY 
-        }]
-    };
-    const savedCoords = { ...coords };
-    
-    holdTimer = setTimeout(() => {
-        // Show magnifier using saved event and coordinates
-        showMagnifierBubble(savedEvent, savedCoords);
-    }, touchHoldDelay);
-}
 
 // Place a point when touch ends
 function placeTouchPoint(coords) {
