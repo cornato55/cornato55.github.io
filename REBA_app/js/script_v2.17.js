@@ -1912,16 +1912,17 @@ function positionMagnifierBubble(touchX, touchY) {
     let bubbleX = touchX ;
     let bubbleY = touchY - offsetY;
     
-    // Keep within horizontal bounds
-    if (bubbleX < -100) {
-        bubbleX = -100;
-    } else if (bubbleX + bubbleSize > screenWidth - 20) {
-        bubbleX = screenWidth - bubbleSize - 20;
+    // Keep within horizontal bounds - allow much more range
+    const margin = 5; // Very small margin from screen edges
+    if (bubbleX < margin) {
+        bubbleX = margin;
+    } else if (bubbleX + bubbleSize > screenWidth - margin) {
+        bubbleX = screenWidth - bubbleSize - margin;
     }
     
     // If too close to top, position below finger instead
-    if (bubbleY < 0) {
-        bubbleY = touchY + 10; // Below finger
+    if (bubbleY < margin) {
+        bubbleY = touchY + Math.abs(offsetY) + 10; // Below finger
     }
     
     // Apply the position
@@ -2694,7 +2695,7 @@ function handleTouchStart(e) {
     touchStillOnCanvas = true;
     
     // Only show magnifier for drawing tools and step 0
-    if (currentTool && drawingStep === 0) {
+    if (currentTool && (drawingStep === 0 || drawingStep===1)) {
         showMagnifierBubble(e, coords);
     }
 }
@@ -2712,15 +2713,22 @@ function handleTouchMove(e) {
         if (magnifierActive) {
             hideMagnifierBubble();
         }
-        
-        // Reset drawing state if we go off canvas
-        if (drawingStep === 1) {
-            drawingStep = 0;
-            points = [];
-            redrawCanvas(); // Clear any preview
-        }
         return;
     }
+    
+    // Update touchStillOnCanvas to true since we're back on canvas
+    touchStillOnCanvas = true;
+    
+    // Only continue if magnifier is active and we started on canvas
+    if (magnifierActive && touchStartedOnCanvas) {
+        updateMagnifierBubble(e, coords);
+        
+        if (drawingStep === 1 && points.length > 0) {
+            drawMainCanvasPreview(coords);
+            drawPreviewInMagnifier(coords);
+        }
+    }
+}
     
     // Only continue if magnifier is active and we started on canvas
     if (magnifierActive && touchStartedOnCanvas) {
