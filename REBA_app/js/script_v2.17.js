@@ -1012,15 +1012,6 @@ function handleImageUpload(e) {
     reader.readAsDataURL(file);
 }
 
-// 3. Add mobile-friendly touch feedback
-function addTouchFeedback() {
-
-    // Add touch class to body if on mobile
-    if ('ontouchstart' in window) {
-        document.body.classList.add('touch-device');
-    }
-}
-
 function promptForSubjectDirection() {
     // Create a popup overlay
     const popup = document.createElement('div');
@@ -3269,9 +3260,6 @@ function main() {
         
         // Set up event listeners for both desktop and mobile
         setupEventListeners();
-        
-        // Add mobile-friendly touch feedback
-        addTouchFeedback();
         
         // Mark upload step as available
         const uploadStep = document.querySelector('[data-step="upload"]');
