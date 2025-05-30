@@ -1901,26 +1901,25 @@ function positionMagnifierBubble(touchX, touchY) {
     if (!magnifierBubble) return;
     
     const bubbleSize = 120;
-    const offsetY = 5; // Fixed distance above finger
+    const offsetY = 0.5; // Fixed distance above finger
+// Only adjust if going off screen edges
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
     
     // Center horizontally on finger, position above
     let bubbleX = touchX - (bubbleSize / 2);
     let bubbleY = touchY - offsetY;
     
-    // Only adjust if going off screen edges
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-    
     // Keep within horizontal bounds
-    if (bubbleX < 10) {
-        bubbleX = 10;
-    } else if (bubbleX + bubbleSize > screenWidth - 10) {
-        bubbleX = screenWidth - bubbleSize - 10;
+    if (bubbleX < -60) {
+        bubbleX = -60;
+    } else if (bubbleX + bubbleSize > screenWidth - 60) {
+        bubbleX = screenWidth - bubbleSize - 60;
     }
     
     // If too close to top, position below finger instead
-    if (bubbleY < 10) {
-        bubbleY = touchY + 30; // Below finger
+    if (bubbleY < 0) {
+        bubbleY = touchY + 20; // Below finger
     }
     
     // Apply the position
@@ -2625,7 +2624,12 @@ function handleTouchMove(e) {
     e.preventDefault();
     
     const coords = getCanvasCoordinates(e);
-    if (!coords) return;
+    if (!coords) {
+	if (magnifierActive) {
+		hideMagnifierBubble();
+	}
+	return;
+    }
     
     if (magnifierActive) {
         // Update magnifier bubble position and content
@@ -2636,36 +2640,6 @@ function handleTouchMove(e) {
             drawPreviewInMagnifier(coords);
         }
     }
-}
-
-function handleTouchEnd(e) {
-    e.preventDefault();
-    console.log('Touch end - drawing step:', drawingStep, 'magnifier active:', magnifierActive);
-    
-    if (!magnifierActive) {
-        console.log('Touch end - magnifier not active, ignoring');
-        return;
-    }
-    
-    const touch = e.changedTouches[0];
-    if (!touch) {
-        hideMagnifierBubble();
-        return;
-    }
-    
-    const coords = getCanvasCoordinates({ 
-        type: 'touchend', 
-        changedTouches: [touch] 
-    });
-    
-    if (!coords) {
-        hideMagnifierBubble();
-        return;
-    }
-    
-    // Place the point
-    placeTouchPoint(coords);
-    hideMagnifierBubble();
 }
 
 function handleTouchEnd(e) {
