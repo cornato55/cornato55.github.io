@@ -1901,13 +1901,13 @@ function positionMagnifierBubble(touchX, touchY) {
     if (!magnifierBubble) return;
     
     const bubbleSize = 120;
-    const offsetY = 0.5; // Fixed distance above finger
+    const offsetY = -30; // Fixed distance above finger
 // Only adjust if going off screen edges
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
     
     // Center horizontally on finger, position above
-    let bubbleX = touchX - (bubbleSize / 2);
+    let bubbleX = touchX ;
     let bubbleY = touchY - offsetY;
     
     // Keep within horizontal bounds
