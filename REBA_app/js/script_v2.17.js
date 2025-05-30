@@ -2728,7 +2728,7 @@ function handleTouchMove(e) {
             drawPreviewInMagnifier(coords);
         }
     }
-}
+
     
     // Only continue if magnifier is active and we started on canvas
     if (magnifierActive && touchStartedOnCanvas) {
