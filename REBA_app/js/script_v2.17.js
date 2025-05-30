@@ -15,6 +15,8 @@ let magnifierCanvas = null;
 let magnifierCtx = null;
 let magnifierActive = false;
 let bubbleScale = 3;
+let touchStartedOnCanvas = false;
+let touchStillOnCanvas = true;
 
 let adjustments = {
   neck: { twisted: false, sideBending: false },
@@ -1911,15 +1913,15 @@ function positionMagnifierBubble(touchX, touchY) {
     let bubbleY = touchY - offsetY;
     
     // Keep within horizontal bounds
-    if (bubbleX < -60) {
-        bubbleX = -60;
-    } else if (bubbleX + bubbleSize > screenWidth - 60) {
-        bubbleX = screenWidth - bubbleSize - 60;
+    if (bubbleX < -100) {
+        bubbleX = -100;
+    } else if (bubbleX + bubbleSize > screenWidth - 20) {
+        bubbleX = screenWidth - bubbleSize - 20;
     }
     
     // If too close to top, position below finger instead
     if (bubbleY < 0) {
-        bubbleY = touchY + 20; // Below finger
+        bubbleY = touchY + 10; // Below finger
     }
     
     // Apply the position
@@ -1978,7 +1980,7 @@ function updateMagnifierContent(coords) {
     }
 }
 
-// Draw preview line in magnifier for second point
+// Draw preview line in magnifier for second point - improved visibility
 function drawPreviewInMagnifier(coords) {
     if (!magnifierCtx || points.length === 0) return;
     
@@ -1991,23 +1993,42 @@ function drawPreviewInMagnifier(coords) {
     
     const firstPoint = points[0];
     
-    // Draw preview line if first point is visible
-    if (firstPoint.x >= sourceX && firstPoint.x <= sourceX + sourceSize &&
-        firstPoint.y >= sourceY && firstPoint.y <= sourceY + sourceSize) {
+    // Calculate magnifier coordinates for both points
+    const startX = ((firstPoint.x - sourceX) / sourceSize) * 120;
+    const startY = ((firstPoint.y - sourceY) / sourceSize) * 120;
+    const endX = ((coords.x - sourceX) / sourceSize) * 120;
+    const endY = ((coords.y - sourceY) / sourceSize) * 120;
+    
+    // Calculate distance to handle small distances better
+    const distance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+    
+    // Always draw the line, even if first point isn't fully visible or distance is small
+    if (distance > 1) { // Only skip if points are essentially the same
         
-        const startX = ((firstPoint.x - sourceX) / sourceSize) * 120;
-        const startY = ((firstPoint.y - sourceY) / sourceSize) * 120;
-        const endX = ((coords.x - sourceX) / sourceSize) * 120;
-        const endY = ((coords.y - sourceY) / sourceSize) * 120;
+        // Make line much more visible
+        magnifierCtx.strokeStyle = '#FF0000'; // Bright red
+        magnifierCtx.lineWidth = 4; // Much thicker
+        magnifierCtx.setLineDash([]); // Solid line instead of dashed
+        magnifierCtx.globalAlpha = 0.8; // Slightly transparent so it doesn't completely hide the image
         
-        magnifierCtx.strokeStyle = 'red';
-        magnifierCtx.lineWidth = 2;
-        magnifierCtx.setLineDash([3, 2]);
         magnifierCtx.beginPath();
         magnifierCtx.moveTo(startX, startY);
         magnifierCtx.lineTo(endX, endY);
         magnifierCtx.stroke();
-        magnifierCtx.setLineDash([]);
+        
+        // Add a small circle at the start point for better visibility
+        magnifierCtx.fillStyle = '#FF0000';
+        magnifierCtx.beginPath();
+        magnifierCtx.arc(startX, startY, 3, 0, 2 * Math.PI);
+        magnifierCtx.fill();
+        
+        // Add a small circle at the current point
+        magnifierCtx.beginPath();
+        magnifierCtx.arc(endX, endY, 2, 0, 2 * Math.PI);
+        magnifierCtx.fill();
+        
+        // Reset alpha
+        magnifierCtx.globalAlpha = 1.0;
     }
 }
 
@@ -2603,39 +2624,43 @@ function handleTouchStart(e) {
     e.preventDefault();
     console.log('Touch start - current tool:', currentTool, 'drawing step:', drawingStep);
     
-    if (!currentTool) {
-        console.log('Touch start ignored - no tool selected');
-        return;
-    }
-    
     const coords = getCanvasCoordinates(e);
-    if (!coords) {
-        console.log('Touch start - no valid coordinates');
-        return;
-    }
-    
     console.log('Touch start coordinates:', coords);
     
-    // Show magnifier immediately on touch
-    showMagnifierBubble(e, coords);
+    // Track if touch started on canvas
+    touchStartedOnCanvas = !!coords;
+    touchStillOnCanvas = touchStartedOnCanvas;
+    
+    if (!coords) {
+        console.log('Touch started outside canvas');
+        return;
+    }
+    
+    // Show magnifier for drawing tools
+    if (currentTool === 'draw-trunk') {
+        showMagnifierBubble(e, coords);
+    }
 }
 
 function handleTouchMove(e) {
     e.preventDefault();
     
     const coords = getCanvasCoordinates(e);
+    
+    // Track if we're still on canvas
+    touchStillOnCanvas = !!coords;
+    
+    // If touch goes off the image, hide magnifier
     if (!coords) {
-	if (magnifierActive) {
-		hideMagnifierBubble();
-	}
-	return;
+        if (magnifierActive) {
+            hideMagnifierBubble();
+        }
+        return;
     }
     
     if (magnifierActive) {
-        // Update magnifier bubble position and content
         updateMagnifierBubble(e, coords);
         
-        // If we're drawing the second point, show preview line in magnifier
         if (drawingStep === 1 && points.length > 0) {
             drawPreviewInMagnifier(coords);
         }
@@ -2646,33 +2671,30 @@ function handleTouchEnd(e) {
     e.preventDefault();
     console.log('Touch end - drawing step:', drawingStep, 'magnifier active:', magnifierActive);
     
-    if (!magnifierActive) {
-        console.log('Touch end - magnifier not active, ignoring');
+    if (!magnifierActive || !touchStartedOnCanvas || !touchStillOnCanvas) {
+        console.log('Touch end - invalid touch, ignoring');
         hideMagnifierBubble();
+        touchStartedOnCanvas = false;
+        touchStillOnCanvas = true;
         return;
     }
     
-    const touch = e.changedTouches[0];
-    if (!touch) {
-        hideMagnifierBubble();
-        return;
-    }
+    const coords = getCanvasCoordinates(e);
     
-    const coords = getCanvasCoordinates({ 
-        type: 'touchend', 
-        changedTouches: [touch] 
-    });
-    
+    // Only place point if touch ended on canvas
     if (!coords) {
         hideMagnifierBubble();
+        touchStartedOnCanvas = false;
+        touchStillOnCanvas = true;
         return;
     }
     
     // Place the point
     placeTouchPoint(coords);
     hideMagnifierBubble();
+    touchStartedOnCanvas = false;
+    touchStillOnCanvas = true;
 }
-
 
 // Place a point when touch ends
 function placeTouchPoint(coords) {
