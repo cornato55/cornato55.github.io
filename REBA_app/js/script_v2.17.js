@@ -1014,35 +1014,7 @@ function handleImageUpload(e) {
 
 // 3. Add mobile-friendly touch feedback
 function addTouchFeedback() {
-    // Add CSS for touch feedback
-    const style = document.createElement('style');
-    style.textContent = `
-        .tool-btn {
-            transition: transform 0.1s, background-color 0.2s;
-        }
-        .tool-btn:active {
-            transform: scale(0.95);
-            background-color: #4CAF50 !important;
-        }
-        button:active {
-            transform: scale(0.95);
-        }
-        /* Make buttons larger on mobile */
-        @media (max-width: 768px) {
-            .tool-btn, button {
-                padding: 12px !important;
-                margin: 5px !important;
-                font-size: 16px !important;
-            }
-            /* Larger hit areas for controls */
-            .controls-container button {
-                min-height: 44px;
-                min-width: 44px;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    
+
     // Add touch class to body if on mobile
     if ('ontouchstart' in window) {
         document.body.classList.add('touch-device');
