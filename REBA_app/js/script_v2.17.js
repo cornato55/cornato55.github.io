@@ -1989,7 +1989,7 @@ function drawMainCanvasPreview(coords) {
     
     // Clear any previous preview (redraw the image)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
     
     // Redraw existing lines and points
     redrawAllLines();
@@ -2023,6 +2023,15 @@ function drawMainCanvasPreview(coords) {
     
     // Restore canvas state
     ctx.restore();
+}
+
+// Redraw all existing lines
+function redrawAllLines() {
+    for (const [toolType, linePoints] of Object.entries(lines)) {
+        if (linePoints && linePoints.length >= 2) {
+            drawLine(linePoints[0], linePoints[1], toolType);
+        }
+    }
 }
 
 // Draw preview line in magnifier for second point - improved visibility
@@ -2672,17 +2681,20 @@ function handleTouchStart(e) {
     const coords = getCanvasCoordinates(e);
     console.log('Touch start coordinates:', coords);
     
-    // Track if touch started on canvas
-    touchStartedOnCanvas = !!coords;
-    touchStillOnCanvas = touchStartedOnCanvas;
-    
-    if (!coords) {
-        console.log('Touch started outside canvas');
+    // STRICT BOUNDS CHECK - must be completely within canvas
+    if (!coords || coords.x < 0 || coords.x > canvas.width || coords.y < 0 || coords.y > canvas.height) {
+        console.log('Touch started outside canvas bounds');
+        touchStartedOnCanvas = false;
+        touchStillOnCanvas = false;
         return;
     }
     
-    // Show magnifier for drawing tools
-    if (currentTool === 'draw-trunk') {
+    // Track that touch started properly on canvas
+    touchStartedOnCanvas = true;
+    touchStillOnCanvas = true;
+    
+    // Only show magnifier for drawing tools and step 0
+    if (currentTool && drawingStep === 0) {
         showMagnifierBubble(e, coords);
     }
 }
@@ -2692,22 +2704,30 @@ function handleTouchMove(e) {
     
     const coords = getCanvasCoordinates(e);
     
-    // Track if we're still on canvas
-    touchStillOnCanvas = !!coords;
-    
-    // If touch goes off the image, hide magnifier
-    if (!coords) {
+    // STRICT BOUNDS CHECK - if outside canvas, cancel everything
+    if (!coords || coords.x < 0 || coords.x > canvas.width || coords.y < 0 || coords.y > canvas.height) {
+        console.log('Touch moved outside canvas - cancelling');
+        touchStillOnCanvas = false;
+        
         if (magnifierActive) {
             hideMagnifierBubble();
+        }
+        
+        // Reset drawing state if we go off canvas
+        if (drawingStep === 1) {
+            drawingStep = 0;
+            points = [];
+            redrawCanvas(); // Clear any preview
         }
         return;
     }
     
-    if (magnifierActive) {
+    // Only continue if magnifier is active and we started on canvas
+    if (magnifierActive && touchStartedOnCanvas) {
         updateMagnifierBubble(e, coords);
         
         if (drawingStep === 1 && points.length > 0) {
-	    drawMainCanvasPreview(coords);
+            drawMainCanvasPreview(coords);
             drawPreviewInMagnifier(coords);
         }
     }
@@ -2718,20 +2738,39 @@ function handleTouchEnd(e) {
     console.log('Touch end - drawing step:', drawingStep, 'magnifier active:', magnifierActive);
 
     const coords = getCanvasCoordinates(e);
-	
-    if (!magnifierActive || !touchStartedOnCanvas || !touchStillOnCanvas || !coords) {
+    
+    // STRICT CHECK - only place point if:
+    // 1. Started on canvas
+    // 2. Still on canvas
+    // 3. Magnifier was active
+    // 4. Coordinates are valid and within bounds
+    const validTouch = touchStartedOnCanvas && 
+                      touchStillOnCanvas && 
+                      magnifierActive && 
+                      coords && 
+                      coords.x >= 0 && coords.x <= canvas.width && 
+                      coords.y >= 0 && coords.y <= canvas.height;
+    
+    if (!validTouch) {
         console.log('Touch end - invalid touch, ignoring');
         hideMagnifierBubble();
+        
+        // Reset everything
         touchStartedOnCanvas = false;
-        touchStillOnCanvas = true;
+        touchStillOnCanvas = false;
+        drawingStep = 0;
+        points = [];
+        redrawCanvas();
         return;
     }
     
     // Place the point
     placeTouchPoint(coords);
     hideMagnifierBubble();
+    
+    // Reset tracking
     touchStartedOnCanvas = false;
-    touchStillOnCanvas = true;
+    touchStillOnCanvas = false;
 }
 
 // Place a point when touch ends
