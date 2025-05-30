@@ -1980,6 +1980,51 @@ function updateMagnifierContent(coords) {
     }
 }
 
+// Draw preview line on main canvas
+function drawMainCanvasPreview(coords) {
+    if (points.length === 0 || drawingStep !== 1) return;
+    
+    // Save current canvas state
+    ctx.save();
+    
+    // Clear any previous preview (redraw the image)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
+    // Redraw existing lines and points
+    redrawAllLines();
+    
+    // Draw preview line
+    const firstPoint = points[0];
+    ctx.strokeStyle = '#FF0000';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.7;
+    ctx.setLineDash([5, 3]);
+    
+    ctx.beginPath();
+    ctx.moveTo(firstPoint.x, firstPoint.y);
+    ctx.lineTo(coords.x, coords.y);
+    ctx.stroke();
+    
+    // Draw point markers
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#FF0000';
+    ctx.globalAlpha = 1.0;
+    
+    // First point
+    ctx.beginPath();
+    ctx.arc(firstPoint.x, firstPoint.y, 3, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // Current point
+    ctx.beginPath();
+    ctx.arc(coords.x, coords.y, 2, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // Restore canvas state
+    ctx.restore();
+}
+
 // Draw preview line in magnifier for second point - improved visibility
 function drawPreviewInMagnifier(coords) {
     if (!magnifierCtx || points.length === 0) return;
@@ -2662,6 +2707,7 @@ function handleTouchMove(e) {
         updateMagnifierBubble(e, coords);
         
         if (drawingStep === 1 && points.length > 0) {
+	    drawMainCanvasPreview(coords);
             drawPreviewInMagnifier(coords);
         }
     }
@@ -2670,19 +2716,11 @@ function handleTouchMove(e) {
 function handleTouchEnd(e) {
     e.preventDefault();
     console.log('Touch end - drawing step:', drawingStep, 'magnifier active:', magnifierActive);
-    
-    if (!magnifierActive || !touchStartedOnCanvas || !touchStillOnCanvas) {
-        console.log('Touch end - invalid touch, ignoring');
-        hideMagnifierBubble();
-        touchStartedOnCanvas = false;
-        touchStillOnCanvas = true;
-        return;
-    }
-    
+
     const coords = getCanvasCoordinates(e);
-    
-    // Only place point if touch ended on canvas
-    if (!coords) {
+	
+    if (!magnifierActive || !touchStartedOnCanvas || !touchStillOnCanvas || !coords) {
+        console.log('Touch end - invalid touch, ignoring');
         hideMagnifierBubble();
         touchStartedOnCanvas = false;
         touchStillOnCanvas = true;
