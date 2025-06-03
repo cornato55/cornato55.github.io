@@ -4,8 +4,6 @@ let lines = {};
 let points = [];
 let currentTool = null;
 let isDrawing = false;
-let referenceDirection = 'vertical';
-let previewLine = null;
 let angles = {};
 let uploadedImage = null;
 let drawingStep = 0; // 0: not drawing, 1: first point placed, waiting for second click
@@ -14,9 +12,9 @@ let magnifierBubble = null;
 let magnifierCanvas = null;
 let magnifierCtx = null;
 let magnifierActive = false;
-let bubbleScale = 3;
 let touchStartedOnCanvas = false;
 let touchStillOnCanvas = true;
+let lineOrder = [];
 
 let adjustments = {
   neck: { twisted: false, sideBending: false },
@@ -336,29 +334,6 @@ function calculateAngle(point1, point2, toolType) {
     
     console.log(`Default angle from vertical: ${angle.toFixed(1)}°`);
     return angle;
-}
-
-// Add this new function after calculateAngle
-function updateDependentAngles(toolType) {
-    const dependencyMap = {
-        'trunk': ['neck', 'upper-arm', 'upper-leg'],  // Trunk affects neck, upper arm, and upper leg
-        'upper-leg': ['lower-leg'],                   // Upper leg affects lower leg
-        'upper-arm': ['lower-arm'],                   // Upper arm affects lower arm
-        'lower-arm': ['wrist']                        // Lower arm affects wrist
-    };
-    
-    // If this tool affects other measurements
-    const dependents = dependencyMap[toolType];
-    if (!dependents) return;
-    
-    // Recalculate all dependent angles
-    dependents.forEach(dependent => {
-        if (lines[dependent]) {
-            // Recalculate the angle
-            const pts = lines[dependent];
-            angles[dependent] = calculateAngle(pts[0], pts[1], dependent);
-        }
-    });
 }
 
 // Neck score calculation
@@ -1126,191 +1101,6 @@ function getCanvasCoordinates(e) {
     return { x, y };
 }
 
-// Add touch event handlers for mobile support
-function setupTouchEventListeners() {
-    // Handle the touchstart event
-    canvas.addEventListener('touchstart', function(e) {
-        e.preventDefault();  // Prevent default behavior like scrolling
-        console.log('Touch start detected');
-
-        // Ensure we're only starting a new line if it's not already in progress
-        if (drawingStep === 0) {
-            startDrawing(e);  // Start the drawing process
-        }
-    }, { passive: false });
-
-    // Handle the touchmove event
-    canvas.addEventListener('touchmove', function(e) {
-        e.preventDefault();  // Prevent default behavior like scrolling
-        console.log('Touch move detected');
-
-        // Only show the preview if we're in drawing mode (i.e., step 1)
-        if (drawingStep === 1) {
-            drawPreview(e);  // Draw the preview line as the user moves their finger
-        }
-    }, { passive: false });
-
-    // Handle the touchend event
-    canvas.addEventListener('touchend', function(e) {
-        e.preventDefault();  // Prevent default behavior like zooming or scrolling
-
-        console.log('Touch end detected');
-		console.log(e);
-
-        // Only finalize if we have already placed the first point
-        if (e.changedTouches && e.changedTouches.length > 0) {
-            const touch = e.changedTouches[0];  // Get the final touch position
-			console.log('Touch data', touch);
-			
-			if (touch) {
-				const coords = getCanvasCoordinates({
-					type: 'touch',
-					changedTouches: [touch]
-				});
-				
-				console.log('Canvas Coord:', coords);
-
-				// Add the second point
-				points.push(coords);
-
-				// Call stopDrawing to finalize the line
-				stopDrawing(e);  // Finalize the line and handle the cleanup
-			} else {
-				console.error('No valid touch data in changedTouches0');
-			}
-		} else {
-			console.error('No changedTouched data available');
-		}
-    }, { passive: false });
-}
-
-// 1. Improved function to handle mouse and touch drawing start
-function startDrawing(e) {
-    console.log('Start drawing called with event type:', e.type);
-    
-    // Only proceed if a tool is selected
-    if (!currentTool) {
-        console.log('No tool selected');
-        return;
-    }
-
-    e.preventDefault();
-    
-    // Get canvas coordinates
-    const coords = getCanvasCoordinates(e);
-    if (!coords) {
-        console.error('Failed to get canvas coordinates');
-        return;
-    }
-    
-    console.log('Drawing start coordinates:', coords.x, coords.y);
-    
-    // Handle first click - start drawing a line
-    if (drawingStep === 0) {
-        // Start a new line
-        points = [coords];
-        drawingStep = 1;
-        isDrawing = true;
-        
-        // Draw the first point
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(coords.x, coords.y, 6, 0, Math.PI * 2); // Larger point for better visibility
-        ctx.fill();
-        
-        console.log('First point placed');
-    }
-}
-
-// 2. Improved mousemove handler to draw preview line
-function drawPreview(e) {
-    // Only preview if we're in the drawing state
-    if (drawingStep !== 1 || points.length === 0) {
-        return;
-    }
-    
-    e.preventDefault();
-    
-    // Get current coordinates
-    const coords = getCanvasCoordinates(e);
-    if (!coords) return;
-    
-    // Redraw everything
-    redrawCanvas();
-    
-    // Draw preview line
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([5, 3]); // Dashed line for preview
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    ctx.lineTo(coords.x, coords.y);
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset dash style
-    
-    // Redraw first point
-    ctx.fillStyle = 'red';
-    ctx.beginPath();
-    ctx.arc(points[0].x, points[0].y, 6, 0, Math.PI * 2);
-    ctx.fill();
-}
-
-// 3. Improved handling for finishing a line
-function completeLine(e) {
-    console.log('Complete line called with event type:', e.type);
-    
-    // Only proceed if we have the first point already
-    if (drawingStep !== 1 || points.length === 0 || !currentTool) {
-        console.log('Not in drawing mode or no tool selected');
-        return;
-    }
-    
-    e.preventDefault();
-    
-    // Get final coordinates
-    const coords = getCanvasCoordinates(e);
-    if (!coords) {
-        console.error('Failed to get canvas coordinates for line completion');
-        return;
-    }
-    
-    console.log('End drawing coordinates:', coords.x, coords.y);
-    
-    // Add the second point
-    points.push(coords);
-    
-    // Get the tool type
-    const toolType = currentTool.replace('draw-', '');
-    
-    // Save line points
-    lines[toolType] = [...points];
-    
-    // Calculate angle
-    const angle = calculateAngle(points[0], points[1], toolType);
-    angles[toolType] = angle;
-    
-    console.log(`Line completed for ${toolType}, angle: ${angle.toFixed(1)}°`);
-    
-    // Redraw everything with the new line
-    redrawCanvas();
-    
-    // Draw the final line
-    drawLine(points[0], points[1], toolType);
-    
-    // Reset drawing state
-    drawingStep = 0;
-    isDrawing = false;
-    
-    // Enable undo button
-    const undoButton = document.getElementById('undo-last');
-    if (undoButton) {
-        undoButton.disabled = false;
-    }
-    
-    // Show adjustment popup if applicable
-    showAdjustmentPopup(toolType);
-}
-
 // Show adjustment popup for additional factors
 function showAdjustmentPopup(toolType) {
     // Create a popup overlay
@@ -1677,21 +1467,14 @@ function advanceToNextTool(toolType) {
     }
 }
 
-// Select drawing tool
 function selectTool(toolId) {
-    // Reset previous selection
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    
     // Remove active class from all checkpoints
     document.querySelectorAll('.checkpoint-list li').forEach(li => {
         li.classList.remove('active');
     });
     
-    // Set new tool
+    // Set new tool - THIS IS ESSENTIAL
     currentTool = toolId;
-    document.getElementById(toolId).classList.add('selected');
     
     // Map tool ID to checkpoint step
     const toolToStep = {
@@ -1716,7 +1499,6 @@ function selectTool(toolId) {
     
     // Update instructions
     updateInstructions(toolId);
-    
 }
 
 // Update instructions based on selected tool
@@ -2102,20 +1884,39 @@ function undoLastLine() {
     drawingStep = 0;
     points = [];
     
-    if (currentTool) {
-        const toolType = currentTool.replace('draw-', '');
-        if (lines[toolType]) {
-            delete lines[toolType];
-            delete angles[toolType];
-            redrawCanvas();
+    // Get the most recently drawn line
+    if (lineOrder.length > 0) {
+        const lastToolType = lineOrder.pop(); // Remove and get last item
+        
+        // Remove the line and angle
+        if (lines[lastToolType]) {
+            delete lines[lastToolType];
         }
+        if (angles[lastToolType]) {
+            delete angles[lastToolType];
+        }
+        
+        // Redraw canvas without the removed line
+        redrawCanvas();
+        
+        console.log(`Undid line: ${lastToolType}`);
+        
+        // FIXED: Stay on the same tool that was just undone
+        selectTool(`draw-${lastToolType}`);
     }
     
     // Only disable undo button if NO lines exist
-    if (Object.keys(lines).length === 0) {
-        document.getElementById('undo-last').disabled = true;
+    if (lineOrder.length === 0) {
+        const undoButton = document.getElementById('undo-last');
+        if (undoButton) {
+            undoButton.disabled = true;
+        }
+        // If no lines left, go back to trunk
+        selectTool('draw-trunk');
     }
-    // If there are still lines, keep undo button enabled
+    
+    // Update the calculate button state
+    checkAllStepsComplete();
 }
 
 // Redraw canvas with all saved lines
@@ -2148,145 +1949,6 @@ function redrawCanvas() {
             ctx.strokeText(`${angles[toolType].toFixed(1)}°`, midX + 10, midY);
             ctx.fillText(`${angles[toolType].toFixed(1)}°`, midX + 10, midY);
         }
-    }
-}
-
-
-// Function to open webcam on desktop
-function openDesktopCamera() {
-    // Create camera interface
-    const cameraContainer = document.createElement('div');
-    cameraContainer.id = 'camera-container';
-    cameraContainer.style.position = 'fixed';
-    cameraContainer.style.top = '0';
-    cameraContainer.style.left = '0';
-    cameraContainer.style.width = '100%';
-    cameraContainer.style.height = '100%';
-    cameraContainer.style.backgroundColor = 'rgba(0,0,0,0.9)';
-    cameraContainer.style.zIndex = '9999';
-    cameraContainer.style.display = 'flex';
-    cameraContainer.style.flexDirection = 'column';
-    cameraContainer.style.alignItems = 'center';
-    cameraContainer.style.justifyContent = 'center';
-    cameraContainer.style.padding = '20px';
-    
-    // Create video element
-    const video = document.createElement('video');
-    video.id = 'webcam-video';
-    video.style.maxWidth = '100%';
-    video.style.maxHeight = '60vh';
-    video.style.backgroundColor = '#000';
-    video.style.borderRadius = '8px';
-    video.style.marginBottom = '15px';
-    video.autoplay = true;
-    video.playsInline = true;
-    
-    // Create canvas for capturing the image
-    const canvas = document.createElement('canvas');
-    canvas.id = 'capture-canvas';
-    canvas.style.display = 'none';
-    
-    // Create button container
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.gap = '10px';
-    buttonContainer.style.marginTop = '10px';
-    
-    // Create capture button
-    const captureButton = document.createElement('button');
-    captureButton.textContent = 'Take Photo';
-    captureButton.className = 'control-btn camera-btn';
-    captureButton.style.padding = '10px 20px';
-    
-    // Create cancel button
-    const cancelButton = document.createElement('button');
-    cancelButton.textContent = 'Cancel';
-    cancelButton.className = 'control-btn';
-    cancelButton.style.padding = '10px 20px';
-    cancelButton.style.backgroundColor = '#f44336';
-    
-    // Add buttons to container
-    buttonContainer.appendChild(captureButton);
-    buttonContainer.appendChild(cancelButton);
-    
-    // Add everything to the camera container
-    cameraContainer.appendChild(video);
-    cameraContainer.appendChild(canvas);
-    cameraContainer.appendChild(buttonContainer);
-    
-    // Add to page
-    document.body.appendChild(cameraContainer);
-    
-    // Get user media
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        .then(function(stream) {
-            video.srcObject = stream;
-            
-            // Handle capture button click
-            captureButton.addEventListener('click', function() {
-                // Set canvas dimensions to match video
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                
-                // Draw the current frame to canvas
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                // Convert to data URL
-                const imageDataURL = canvas.toDataURL('image/png');
-                
-                // Convert data URL to Blob
-                const byteString = atob(imageDataURL.split(',')[1]);
-                const mimeString = imageDataURL.split(',')[0].split(':')[1].split(';')[0];
-                const ab = new ArrayBuffer(byteString.length);
-                const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
-                }
-                const blob = new Blob([ab], { type: mimeString });
-                
-                // Create a File object
-                const file = new File([blob], "webcam_capture.png", { type: 'image/png' });
-                
-                // Create a FileList-like object
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                
-                // Set the file input's files
-                const fileInput = document.getElementById('image-upload');
-                fileInput.files = dataTransfer.files;
-                
-                // Trigger change event
-                const event = new Event('change', { 'bubbles': true });
-                fileInput.dispatchEvent(event);
-                
-                // Close the camera
-                closeCamera(stream);
-            });
-            
-            // Handle cancel button click
-            cancelButton.addEventListener('click', function() {
-                closeCamera(stream);
-            });
-        })
-        .catch(function(error) {
-            console.error("Error accessing webcam:", error);
-            alert("Could not access webcam. Please check permissions and try again.");
-            document.body.removeChild(cameraContainer);
-        });
-}
-
-// Function to close camera
-function closeCamera(stream) {
-    // Stop all tracks in the stream
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    
-    // Remove the camera container
-    const cameraContainer = document.getElementById('camera-container');
-    if (cameraContainer) {
-        document.body.removeChild(cameraContainer);
     }
 }
 
@@ -2441,40 +2103,6 @@ function resizeCanvas() {
     console.log('Canvas resized to', canvas.width, 'x', canvas.height);
 }
     
-    
-
-
-// 6. Improved init function
-function initializeCanvas() {
-    console.log('Initializing canvas');
-    
-    // Get canvas and context
-    canvas = document.getElementById('canvas');
-    if (!canvas) {
-        console.error('Canvas element not found!');
-        return;
-    }
-    
-    ctx = canvas.getContext('2d');
-    
-    // Set initial canvas size
-    canvas.width = 500;
-    canvas.height = 400;
-    canvas.style.width = '500px';
-    canvas.style.height = '400px';
-    
-    // Add initial message
-    ctx.fillStyle = '#333';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Upload an image to begin', canvas.width/2, canvas.height/2);
-    
-    // Listen for window resize
-    window.addEventListener('resize', resizeCanvas);
-    
-    console.log('Canvas initialized');
-}
-
 function setupEventListeners() {
     console.log('Setting up event listeners');
     
@@ -2602,6 +2230,12 @@ function handleMouseUp(e) {
     }
     
     finishLine(coords);
+    
+    // ALSO ENABLE UNDO BUTTON HERE AS BACKUP
+    const undoButton = document.getElementById('undo-last');
+    if (undoButton) {
+        undoButton.disabled = false;
+    }
 }
 
 function handleTouchStart(e) {
@@ -2657,17 +2291,6 @@ function handleTouchMove(e) {
             drawPreviewInMagnifier(coords);
         }
     }
-
-    
-    // Only continue if magnifier is active and we started on canvas
-    if (magnifierActive && touchStartedOnCanvas) {
-        updateMagnifierBubble(e, coords);
-        
-        if (drawingStep === 1 && points.length > 0) {
-            drawMainCanvasPreview(coords);
-            drawPreviewInMagnifier(coords);
-        }
-    }
 }
 
 function handleTouchEnd(e) {
@@ -2704,6 +2327,14 @@ function handleTouchEnd(e) {
     // Place the point
     placeTouchPoint(coords);
     hideMagnifierBubble();
+	
+	// BACKUP: Ensure undo button is enabled after any successful touch interaction
+    if (Object.keys(lines).length > 0) {
+        const undoButton = document.getElementById('undo-last');
+        if (undoButton) {
+            undoButton.disabled = false;
+        }
+    }
     
     // Reset tracking
     touchStartedOnCanvas = false;
@@ -2744,12 +2375,18 @@ function placeTouchPoint(coords) {
     }
 }
 
+// Update finishLine() to track order
 function finishLine(coords) {
     // Complete the line
     points.push(coords);
     
     const toolType = currentTool.replace('draw-', '');
     lines[toolType] = [...points];
+    
+    // Track the order this line was drawn
+    if (!lineOrder.includes(toolType)) {
+        lineOrder.push(toolType);
+    }
     
     // Calculate angle
     const angle = calculateAngle(points[0], points[1], toolType);
@@ -2774,125 +2411,6 @@ function finishLine(coords) {
     updateCheckpointForTool(toolType);
     showAdjustmentPopup(toolType);
 }
-
-// Fix 1: Improved touch event handling
-function setupTouchEventListeners() {
-    // Handle touch start - when user first touches the screen
-    canvas.addEventListener('touchstart', function(e) {
-        e.preventDefault(); // Prevent scrolling
-        
-        // Get the touch coordinates
-        const touch = e.touches[0];
-        if (!touch) return;
-        
-        // Convert touch to canvas coordinates
-        const rect = canvas.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        
-        console.log('Touch start at:', x, y);
-        
-        // If not currently drawing, start drawing
-        if (drawingStep === 0 && currentTool) {
-            isDrawing = true;
-            points = [{ x, y }];
-            
-            // Draw the first point
-            ctx.fillStyle = 'red';
-            ctx.beginPath();
-            ctx.arc(x, y, 4, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Move to step 1 (line in progress)
-            drawingStep = 1;
-            console.log('First point placed');
-        }
-    }, { passive: false });
-    
-    // Handle touch move - when user moves finger on screen
-    canvas.addEventListener('touchmove', function(e) {
-        e.preventDefault(); // Prevent scrolling
-        
-        // Only continue if we're drawing and have placed the first point
-        if (drawingStep !== 1 || !isDrawing) return;
-        
-        const touch = e.touches[0];
-        if (!touch) return;
-        
-        // Convert touch to canvas coordinates
-        const rect = canvas.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        
-        // Redraw canvas and preview line
-        redrawCanvas();
-        
-        // Draw preview line
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 3]); // Dashed line
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        
-        // Redraw first point
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(points[0].x, points[0].y, 4, 0, Math.PI * 2);
-        ctx.fill();
-    }, { passive: false });
-    
-    // Handle touch end - when user lifts finger
-    canvas.addEventListener('touchend', function(e) {
-        e.preventDefault();
-        
-        // Only continue if we're drawing and have placed the first point
-        if (drawingStep !== 1 || !isDrawing) return;
-        
-        const touch = e.changedTouches[0]; // Use changedTouches for touchend
-        if (!touch) return;
-        
-        // Convert touch to canvas coordinates
-        const rect = canvas.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        
-        // Add second point where the finger was lifted
-        points.push({ x, y });
-        
-        // Save the line using the current tool
-        if (currentTool) {
-            const toolType = currentTool.replace('draw-', '');
-            lines[toolType] = points.slice();
-            
-            // Calculate angle
-            const angle = calculateAngle(points[0], points[1], toolType);
-            angles[toolType] = angle;
-            
-            // Redraw canvas with final line
-            redrawCanvas();
-            
-            // Draw the final line
-            drawLine(points[0], points[1], toolType);
-            
-            // Show adjustments popup if needed
-            showAdjustmentPopup(toolType);
-            
-            // Update checkpoint status
-            updateCheckpointForTool(toolType);
-            
-            // Reset drawing state
-            isDrawing = false;
-            drawingStep = 0;
-            points = [];
-            
-            console.log(`Line completed for ${toolType}, angle: ${angle.toFixed(1)}°`);
-        }
-    }, { passive: false });
-}
-
 
 // Calculate REBA score
 function calculateREBA() {
