@@ -956,10 +956,7 @@ function handleImageUpload(e) {
             
             // Calculate container dimensions - available space for canvas
             const container = canvas.parentElement;
-	    const isMobile = window.innerWidth <= 768;
-            const containerWidth = isMobile ?
-		    window.innerWidth :
-		    container.clientWidth - 20; // Allow some padding
+	    container.clientWidth - 20; // Allow some padding
             
             // Calculate aspect ratio
             const imageAspectRatio = uploadedImage.height / uploadedImage.width;
@@ -2433,10 +2430,7 @@ function resizeCanvas() {
     if (uploadedImage) {
         // Get container dimensions - optimize for mobile
 	const container = canvas.parentElement;
-	const isMobile = window.innerWidth <= 768;
-	const containerWidth = isMobile ? 
-   	    window.innerWidth : // Mobile: use full viewport width
-    	    container.clientWidth - 20; // Desktop: normal padding
+    	container.clientWidth - 20; // Desktop: normal padding
         
         // Calculate aspect ratio
         const imageAspectRatio = uploadedImage.height / uploadedImage.width;
@@ -2444,12 +2438,7 @@ function resizeCanvas() {
         // Set size based on container width while preserving aspect ratio
         let canvasWidth = containerWidth;
         let canvasHeight = Math.round(containerWidth * imageAspectRatio);
-        
-        // If too tall, scale down to fit viewport height
-	const isMobile = window.innerWidth <= 768;
-        const maxHeight = isMobile ?
-	    window.innerHeight * 0.85 :
-	    window.innerHeight * 0.6;
+	window.innerHeight * 0.6;
     
         }
         
