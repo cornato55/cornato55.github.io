@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>REBA Tool - Collin D. Cortez</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+	<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+        }
+        
+        header {
+            background-color: #1f1f1f;
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        
+        nav li {
+            margin-right: 20px;
+        }
+        
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 300;
+            transition: color 0.3s ease;
+        }
+        
+        nav a:hover {
+            color: #64b5f6;
+        }
+        
+        main {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .container {
+            background-color: #1f1f1f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .drawing-area, .controls {
+            margin-bottom: 20px;
+	        text-align: center;
+        }
+        
+        canvas {
+            max-width: 100%;
+            background-color: #2c2c2c;
+            border-radius: 2px;
+	        display: block;
+	        margin: 0 auto;
+        }
+        
+        button {
+            background-color: #64b5f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            min-height: 40px;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #42a5f5;
+        }
+        
+        button:disabled {
+            background-color: #4f4f4f;
+            cursor: not-allowed;
+        }
+        
+        button.selected {
+            background-color: #2196F3;
+            box-shadow: 0 0 5px rgba(33, 150, 243, 0.8);
+        }
+        
+        .tool-btn {
+            background-color: #64b5f6;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        
+        .tool-btn:hover {
+            background-color: #42a5f5;
+        }
+        
+        .tool-btn.selected {
+            background-color: #FF5722;
+            box-shadow: 0 0 8px rgba(255, 87, 34, 0.8);
+            font-weight: bold;
+        }
+        
+        #calculate-btn {
+            background-color: #4CAF50;
+            color: white;
+            font-size: 1.2em;
+            padding: 12px 24px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        #calculate-btn:hover:not([disabled]) {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0,0,0,0.25);
+        }
+        
+        #calculate-btn:disabled {
+            background-color: #cccccc;
+            color: #999999;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        #calculate-btn:not([disabled]) {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
+        }
+        
+        .upload-container {
+            margin: 10px 0;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 5px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .compact-btn {
+            flex: 1;
+            background-color: #64b5f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-family: 'Roboto', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-height: 40px;
+        }
+        
+        .compact-btn:hover {
+            background-color: #42a5f5;
+        }
+        
+        .file-btn {
+            background-color: #4CAF50;
+        }
+        
+        .file-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .camera-btn {
+            background-color: #2196F3;
+        }
+        
+        .camera-btn:hover {
+            background-color: #0d47a1;
+        }
+        
+        /* Hide the original file input */
+        #image-upload {
+            position: absolute;
+            width: 0.1px;
+            height: 0.1px;
+            opacity: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #64b5f6;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        
+        .results {
+            background-color: #2c2c2c;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .score-section {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .score-box {
+            background-color: #1f1f1f;
+            border-radius: 4px;
+            padding: 15px;
+            width: 48%;
+            margin-bottom: 15px;
+        }
+        
+        .final-score {
+            text-align: center;
+            font-size: 1.5em;
+            color: #64b5f6;
+            margin: 20px 0;
+        }
+        
+        .risk-level {
+            text-align: center;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .risk-low {
+            color: #4CAF50;
+        }
+        
+        .risk-medium {
+            color: #FFC107;
+        }
+        
+        .risk-high {
+            color: #FF9800;
+        }
+        
+        .risk-very-high {
+            color: #F44336;
+        }
+        
+        input[type="file"] {
+            color: #e0e0e0;
+            background-color: #2c2c2c;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        /* Main REBA Score Styling */
+        .reba-main-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .score-display {
+            margin-bottom: 15px;
+        }
+
+        .score-label {
+            font-size: 1.2em;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .final-score {
+            font-size: 3.5em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .risk-level {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .action-required {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        /* Toggle Button Styling */
+        .score-details-container {
+            margin-top: 20px;
+        }
+
+        .toggle-details-btn {
+            width: 100%;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .toggle-details-btn:hover {
+            background: #e9ecef;
+            border-color: #dee2e6;
+            transform: translateY(-1px);
+        }
+
+        .toggle-icon {
+            font-size: 0.9em;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-details-btn.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Collapsible Details Styling */
+        .score-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+            background: #f8f9fa;
+            border-radius: 0 0 10px 10px;
+            border: 2px solid #e9ecef;
+            border-top: none;
+        }
+
+        .score-details.expanded {
+            max-height: 600px;
+            padding: 20px;
+        }
+
+        .score-details.collapsed {
+            padding: 0 20px;
+        }
+
+        .score-section {
+            margin-bottom: 25px;
+        }
+
+        .score-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .score-section h3 {
+            color: #495057;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .score-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .score-item.total-score {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .score-item span:last-child {
+            font-weight: 600;
+            color: #2196f3;
+        }
+
+        .score-item.total-score span:last-child {
+            color: #1976d2;
+            font-size: 1.1em;
+        }
+        
+        .step-instructions {
+            background-color: #2c2c2c;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        /* Magnifier styles */
+        .magnifier-bubble {
+            position: fixed;
+            width: 120px;
+            height: 120px;
+            border: 3px solid #007acc;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            overflow: hidden;
+        }
+
+        .magnifier-canvas {
+            width: 120px;
+            height: 120px;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .magnifier-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+        }
+
+        .magnifier-crosshair::before,
+        .magnifier-crosshair::after {
+            content: '';
+            position: absolute;
+            background: #ff0000;
+        }
+
+        .magnifier-crosshair::before {
+            left: 50%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        .magnifier-crosshair::after {
+            top: 50%;
+            left: 0;
+            height: 2px;
+            width: 100%;
+            transform: translateY(-50%);
+        }
+
+        .magnifier-info {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        /* Prevent zoom on double-tap */
+        * {
+            touch-action: manipulation;
+        }
+        
+        /* Mobile and responsive styles */
+        @media (max-width: 768px) {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            /* Reduce header padding */
+            header {
+                padding: 0.5rem 0;
+            }
+            
+            nav {
+                padding: 0 10px; /* Reduced from 20px */
+            }
+            
+            /* Minimize main container padding */
+            main {
+                margin: 10px auto; /* Reduced from 40px */
+                padding: 0 5px; /* Reduced from 20px */
+                max-width: 100%;
+            }
+            
+            h1 {
+                font-size: 1.8em; /* Smaller title */
+                margin-bottom: 15px; /* Reduced spacing */
+                text-align: center;
+            }
+            
+            /* Minimize container padding */
+            .container {
+                padding: 10px 5px; /* Reduced from 20px */
+                margin-top: 10px; /* Reduced from 20px */
+                border-radius: 4px; /* Smaller radius */
+            }
+            
+            /* Optimize drawing area */
+            .drawing-area {
+                margin-bottom: 10px; /* Reduced spacing */
+                text-align: center;
+            }
+            
+            /* Make canvas take up maximum available space */
+            canvas {
+                max-width: calc(100vw - 20px) !important; /* Full width minus minimal padding */
+                width: calc(100vw - 20px) !important;
+                height: auto !important;
+                border: 1px solid #64b5f6; /* Thinner border */
+                border-radius: 4px;
+                display: block;
+                margin: 5px auto; /* Minimal margins */
+            }
+            
+            /* Canvas container optimization */
+            .canvas-container {
+                padding: 0;
+                margin: 5px 0;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+            }
+            
+            /* Compact step instructions */
+            .step-instructions {
+                padding: 8px; /* Reduced from 15px */
+                margin-bottom: 8px; /* Reduced from 15px */
+                font-size: 14px;
+                line-height: 1.3;
+            }
+            
+            /* Optimize upload container */
+            .upload-container {
+                margin: 5px 0; /* Reduced spacing */
+            }
+            
+            .button-row {
+                gap: 3px; /* Minimal gap */
+                margin-top: 5px;
+            }
+            
+            .compact-btn {
+                min-height: 36px; /* Slightly smaller */
+                font-size: 12px;
+                padding: 6px 8px; /* More compact */
+                margin: 1px;
+            }
+            
+            /* Optimize tool buttons */
+            .tool-btn {
+                min-height: 40px;
+                font-size: 13px; /* Slightly smaller text */
+                margin: 2px;
+                padding: 8px 10px;
+                min-width: 70px; /* Smaller minimum width */
+            }
+            
+            /* Compact controls section */
+            .controls {
+                margin-bottom: 10px;
+                padding: 0 5px;
+            }
+            
+            .controls h2 {
+                font-size: 1.3em;
+                margin: 15px 0 10px 0;
+            }
+            
+            /* Optimize checkpoint list */
+            .checkpoint-list {
+                padding-left: 15px; /* Reduced indentation */
+                margin: 10px 0;
+            }
+            
+            .checkpoint-list li {
+                margin-bottom: 5px; /* Reduced spacing */
+                font-size: 14px;
+            }
+            
+            /* Calculate button optimization */
+            #calculate-btn {
+                margin-top: 15px; /* Reduced from 20px */
+                padding: 10px 20px; /* Slightly smaller */
+                font-size: 1.1em; /* Slightly smaller */
+                max-width: 250px; /* Smaller max width */
+            }
+            
+            /* Results section optimization */
+            .results {
+                padding: 15px 10px; /* More compact */
+                margin-top: 15px;
+            }
+            
+            .reba-main-score {
+                padding: 20px 15px; /* More compact */
+                margin-bottom: 15px;
+            }
+            
+            .final-score {
+                font-size: 2.8em; /* Slightly smaller */
+            }
+            
+            /* Magnifier bubble positioning for better mobile use */
+            .magnifier-bubble {
+                width: 100px; /* Slightly smaller */
+                height: 100px;
+                border-width: 2px;
+            }
+            
+            .magnifier-canvas {
+                width: 100px;
+                height: 100px;
+            }
+        }
+        
+        /* Additional optimizations for very small screens */
+        @media (max-width: 480px) {
+            main {
+                padding: 0 2px; /* Even more minimal padding */
+            }
+            
+            .container {
+                padding: 8px 2px; /* Very minimal padding */
+                margin-top: 5px;
+            }
+            
+            canvas {
+                max-width: calc(100vw - 10px) !important; /* Maximum width usage */
+                width: calc(100vw - 10px) !important;
+                margin: 2px auto;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+            }
+            
+            .step-instructions {
+                padding: 6px;
+                font-size: 13px;
+                margin-bottom: 5px;
+            }
+            
+            .tool-btn {
+                font-size: 12px;
+                min-width: 60px;
+                padding: 6px 8px;
+            }
+        }
+        
+        /* Landscape orientation optimization for phones */
+        @media (max-width: 768px) and (orientation: landscape) {
+            main {
+                margin: 5px auto;
+            }
+            
+            .container {
+                padding: 5px;
+            }
+            
+            canvas {
+                max-height: calc(100vh - 200px); /* Ensure it fits in landscape */
+                width: auto !important;
+                max-width: calc(100vw - 10px) !important;
+            }
+            
+            .step-instructions {
+                padding: 5px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <!-- <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Me</a></li>
+                <li><a href="projects.html">Projects</a></li>
+                <li><a href="blog.html">Blog</a></li> -->
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h1>REBA Tool</h1>
+        <div id="loading" class="loading">Loading application... This may take a few moments.</div>
+        <!-- Add this after your canvas container -->
+        <div id="magnifier-bubble" class="magnifier-bubble">
+            <canvas id="magnifier-canvas" class="magnifier-canvas" width="120" height="120"></canvas>
+            <div class="magnifier-crosshair"></div>
+            <div id="magnifier-info" class="magnifier-info">Hold to place point</div>
+        </div>
+        <div id="app-container" style="display: none;">
+            <div class="container">
+                <div class="drawing-area">
+                    <div class="step-instructions" id="instructions">
+                        Take a photo or upload an image to begin the REBA assessment. Ensure the entire subject is within frame, it is a profile view, and the image is level and clear.
+                    </div>
+                    <div class="upload-container">
+                        <input type="file" id="image-upload" accept="image/*">
+                        <div class="button-row">
+                            <button id="choose-file" class="compact-btn file-btn">📁 Choose File</button>
+                            <button id="take-photo" class="compact-btn camera-btn">📷 Camera</button>
+                            <button id="clear-canvas" class="compact-btn">🗑️ Clear</button>
+                        </div>
+                    </div>
+                    <canvas id="canvas" width="640" height="480"></canvas>
+					<div>
+                        <button id="undo-last" class="tool-btn">↶ Undo Last Line</button>
+                    </div>
+                    <div class="controls">
+                        <button id="calculate-btn" class="next-step" disabled>Calculate REBA Score</button>
+                    </div>
+                    
+                    <div id="results" style="display: none;">
+                        <h2>REBA Assessment Results</h2>
+                        
+                        <!-- Main REBA Score - Always Visible -->
+                        <div class="reba-main-score">
+                            <div class="score-display">
+                                <span class="score-label">Final REBA Score:</span>
+                                <span id="final-reba-score" class="final-score">-</span>
+                            </div>
+                            <div id="risk-level" class="risk-level">-</div>
+                            <div id="action-required" class="action-required">-</div>
+                        </div>
+                        
+                        <!-- Collapsible Detailed Scores -->
+                        <div class="score-details-container">
+                            <button class="toggle-details-btn" onclick="toggleScoreDetails()">
+                                <span class="toggle-icon">▼</span>
+                                Show Detailed Breakdown
+                            </button>
+                            
+                            <div id="score-details" class="score-details collapsed">
+                                <div class="score-section">
+                                    <h3>Group A Score</h3>
+                                    <div class="score-breakdown">
+                                        <div class="score-item">
+                                            <span>Trunk:</span>
+                                            <span id="trunk-score">-</span>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Neck:</span>
+                                            <span id="neck-score">-</span>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Legs:</span>
+                                            <span id="legs-score">-</span>
+                                        </div>
+                                        <div class="score-item total-score">
+                                            <span>Group A Total:</span>
+                                            <span id="group-a-score">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="score-section">
+                                    <h3>Group B Score</h3>
+                                    <div class="score-breakdown">
+                                        <div class="score-item">
+                                            <span>Upper Arm:</span>
+                                            <span id="upperarm-score">-</span>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Lower Arm:</span>
+                                            <span id="lowerarm-score">-</span>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Wrist:</span>
+                                            <span id="wrist-score">-</span>
+                                        </div>
+                                        <div class="score-item total-score">
+                                            <span>Group B Total:</span>
+                                            <span id="group-b-score">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="score-section">
+                                    <h3>Combined Scores</h3>
+                                    <div class="score-breakdown">
+                                        <div class="score-item">
+                                            <span>Table C Score:</span>
+                                            <span id="table-c-score">-</span>
+                                        </div>
+                                        <div class="score-item">
+                                            <span>Activity Score:</span>
+                                            <span id="activity-score">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="js/script_v2.18.js"></script>
+</body>
+</html>
