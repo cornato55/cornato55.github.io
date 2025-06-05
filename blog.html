@@ -250,7 +250,7 @@
                 title: 'Untitled Post',
                 date: new Date().toISOString().split('T')[0],
                 excerpt: '',
-                image: 'https://via.placeholder.com/400x200?text=Blog+Post',
+                image: 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Blog+Post',
                 tags: [],
                 content: '',
                 slug: filename.replace('.md', ''),
@@ -304,6 +304,11 @@
                 post.excerpt = plainText.substring(0, 150) + (plainText.length > 150 ? '...' : '');
             }
 
+            // Fix placeholder image URL
+            if (!post.image || post.image === 'https://via.placeholder.com/400x200?text=Blog+Post') {
+                post.image = 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Blog+Post';
+            }
+
             return post;
         }
 
@@ -320,7 +325,7 @@
                 <article class="blog-post">
                     <a href="blog-post.html?slug=${post.slug}">
                         <img src="${post.image}" alt="${post.title} thumbnail" 
-                             onerror="this.src='https://via.placeholder.com/400x200?text=Blog+Post'">
+                             onerror="this.src='https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Blog+Post'">
                         <div class="blog-post-content">
                             <h2>${post.title}</h2>
                             <div class="blog-post-meta">
