@@ -43,6 +43,15 @@
         nav a:hover {
             color: #64b5f6;
         }
+        .admin-link {
+            background-color: #4caf50;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .admin-link:hover {
+            background-color: #45a049;
+        }
         main {
             max-width: 1200px;
             margin: 40px auto;
@@ -108,90 +117,30 @@
         .footer-links a:hover {
             text-decoration: underline;
         }
-        
-        /* Login Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-        }
-        .modal-content {
-            background-color: #1f1f1f;
-            margin: 15% auto;
-            padding: 30px;
-            border-radius: 8px;
-            width: 400px;
-            max-width: 90%;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .modal h2 {
-            color: #ffffff;
-            margin-top: 0;
+        .loading {
             text-align: center;
-        }
-        .modal input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            background-color: #2a2a2a;
-            border: 1px solid #404040;
-            border-radius: 4px;
-            color: #e0e0e0;
-            box-sizing: border-box;
-        }
-        .modal button {
-            width: 100%;
-            padding: 12px;
-            background-color: #64b5f6;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        .modal button:hover {
-            background-color: #42a5f5;
-        }
-        .close {
             color: #bdbdbd;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
+            font-style: italic;
+            padding: 40px;
         }
-        .close:hover {
-            color: #ffffff;
-        }
-        .admin-controls {
-            display: none;
-            background-color: #2a2a2a;
+        .error-message {
+            background-color: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            color: #f44336;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border: 1px solid #404040;
+            text-align: center;
         }
-        .admin-controls.visible {
-            display: block;
+        .no-posts {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #bdbdbd;
+            padding: 40px;
         }
-        .admin-btn {
-            background-color: #4caf50;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            margin-right: 10px;
-        }
-        .admin-btn:hover {
-            background-color: #45a049;
+        .no-posts h3 {
+            color: #ffffff;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -203,9 +152,7 @@
                 <li><a href="about.html">About Me</a></li>
                 <li><a href="projects.html">Projects</a></li>
                 <li><a href="blog.html">Blog</a></li>
-                <li><a href="#" id="admin-link" onclick="showLoginModal()" style="display: none;">Admin</a></li>
-                <li><a href="#" id="login-link" onclick="showLoginModal()">Login</a></li>
-                <li><a href="#" id="logout-link" onclick="logout()" style="display: none;">Logout</a></li>
+                <li><a href="#" onclick="openAdmin()" class="admin-link">🔒 Admin</a></li>
             </ul>
         </nav>
     </header>
@@ -213,34 +160,10 @@
     <main>
         <h1>Latest Blog Posts</h1>
         
-        <!-- Admin Controls (hidden by default) -->
-        <div class="admin-controls" id="admin-controls">
-            <p style="margin: 0 0 10px 0; color: #ffffff;">Admin Mode Active</p>
-            <a href="admin.html" class="admin-btn">Manage Posts</a>
-            <button onclick="togglePrivatePosts()" class="admin-btn" id="private-toggle">Show Private Posts</button>
-        </div>
-        
         <div class="blog-list" id="blog-list">
-            <!-- Blog posts will be loaded dynamically -->
-            <div id="loading">Loading posts...</div>
+            <div id="loading" class="loading">Loading blog posts...</div>
         </div>
     </main>
-
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeLoginModal()">&times;</span>
-            <h2>Admin Login</h2>
-            <form id="login-form">
-                <input type="text" id="username" placeholder="Username" required>
-                <input type="password" id="password" placeholder="Password" required>
-                <button type="submit">Login</button>
-            </form>
-            <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #bdbdbd;">
-                Default: admin / admin123
-            </p>
-        </div>
-    </div>
 
     <footer>
         <div class="footer-links">
@@ -252,95 +175,21 @@
     </footer>
 
     <script>
-        // Configuration - Update these with your GitHub details
-        const GITHUB_USERNAME = 'Cornato55'; // Replace with your GitHub username
-        const REPO_NAME = 'cornato55.github.io'; // Replace with your repository name
+        // Configuration - UPDATE WITH YOUR DETAILS
+        const GITHUB_USERNAME = 'cornato55';
+        const REPO_NAME = 'cornato55.github.io';
+        const PRIVATE_ADMIN_REPO = 'blog-admin-secure';
 
-        // Admin credentials (change these!)
-        const ADMIN_USERNAME = 'CollinCortez';
-        const ADMIN_PASSWORD = 'W3bs!t3L0g!n';
-        
-        let isLoggedIn = false;
-        let showPrivatePosts = false;
-
-        // Check login status on page load
-        function checkLoginStatus() {
-            const loginStatus = localStorage.getItem('blog-admin-logged-in');
-            if (loginStatus === 'true') {
-                isLoggedIn = true;
-                showAdminControls();
-            }
+        // Open private admin in new tab
+        function openAdmin() {
+            const adminUrl = `https://github.com/${GITHUB_USERNAME}/${PRIVATE_ADMIN_REPO}/blob/main/admin.html`;
+            window.open(adminUrl, '_blank');
         }
 
-        // Show login modal
-        function showLoginModal() {
-            document.getElementById('login-modal').style.display = 'block';
-        }
+        // Load blog posts on page load
+        document.addEventListener('DOMContentLoaded', loadBlogPosts);
 
-        // Close login modal
-        function closeLoginModal() {
-            document.getElementById('login-modal').style.display = 'none';
-        }
-
-        // Handle login
-        document.getElementById('login-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-                isLoggedIn = true;
-                localStorage.setItem('blog-admin-logged-in', 'true');
-                showAdminControls();
-                closeLoginModal();
-                loadBlogPosts(); // Reload posts to show private ones
-            } else {
-                alert('Invalid credentials');
-            }
-        });
-
-        // Logout
-        function logout() {
-            isLoggedIn = false;
-            showPrivatePosts = false;
-            localStorage.removeItem('blog-admin-logged-in');
-            hideAdminControls();
-            loadBlogPosts(); // Reload posts to hide private ones
-        }
-
-        // Show admin controls
-        function showAdminControls() {
-            document.getElementById('admin-controls').classList.add('visible');
-            document.getElementById('login-link').style.display = 'none';
-            document.getElementById('logout-link').style.display = 'inline';
-            document.getElementById('admin-link').style.display = 'inline';
-        }
-
-        // Hide admin controls
-        function hideAdminControls() {
-            document.getElementById('admin-controls').classList.remove('visible');
-            document.getElementById('login-link').style.display = 'inline';
-            document.getElementById('logout-link').style.display = 'none';
-            document.getElementById('admin-link').style.display = 'none';
-        }
-
-        // Toggle private posts visibility
-        function togglePrivatePosts() {
-            showPrivatePosts = !showPrivatePosts;
-            const button = document.getElementById('private-toggle');
-            button.textContent = showPrivatePosts ? 'Hide Private Posts' : 'Show Private Posts';
-            loadBlogPosts();
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('login-modal');
-            if (event.target === modal) {
-                closeLoginModal();
-            }
-        }
-
-        // Load blog posts from GitHub
+        // Load blog posts from GitHub API
         async function loadBlogPosts() {
             const loadingDiv = document.getElementById('loading');
             const blogList = document.getElementById('blog-list');
@@ -350,12 +199,12 @@
                 const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/blog-posts`);
                 
                 if (response.status === 404) {
-                    loadingDiv.innerHTML = 'No blog posts folder found. Create your first post in the admin panel!';
+                    showNoPosts('No blog posts folder found. Use the admin panel to create your first post!');
                     return;
                 }
 
                 if (!response.ok) {
-                    throw new Error('Failed to load posts');
+                    throw new Error(`Failed to load posts: ${response.status} ${response.statusText}`);
                 }
 
                 const files = await response.json();
@@ -368,7 +217,11 @@
                             const postResponse = await fetch(file.download_url);
                             const content = await postResponse.text();
                             const post = parseMarkdownPost(content, file.name);
-                            posts.push(post);
+                            
+                            // Only show public posts (private posts are hidden from public view)
+                            if (!post.private) {
+                                posts.push(post);
+                            }
                         } catch (error) {
                             console.error('Error loading post:', file.name, error);
                         }
@@ -382,9 +235,13 @@
                 displayPosts(posts);
                 loadingDiv.style.display = 'none';
 
+                if (posts.length === 0) {
+                    showNoPosts('No blog posts found. Use the admin panel to create your first post!');
+                }
+
             } catch (error) {
                 console.error('Error loading blog posts:', error);
-                loadingDiv.innerHTML = 'Failed to load posts. Please try again later.';
+                showError(`Failed to load blog posts: ${error.message}`);
             }
         }
 
@@ -395,11 +252,11 @@
                 title: 'Untitled Post',
                 date: new Date().toISOString().split('T')[0],
                 excerpt: '',
-                image: 'https://via.placeholder.com/400x200',
+                image: 'https://via.placeholder.com/400x200?text=Blog+Post',
                 tags: [],
                 content: '',
                 slug: filename.replace('.md', ''),
-                private: false // New field for private posts
+                private: false
             };
 
             let contentStartIndex = 0;
@@ -427,10 +284,10 @@
                                 post.excerpt = value.replace(/"/g, '');
                                 break;
                             case 'image':
-                                post.image = value;
+                                post.image = value || post.image;
                                 break;
                             case 'tags':
-                                post.tags = value.split(',').map(tag => tag.trim());
+                                post.tags = value.split(',').map(tag => tag.trim()).filter(tag => tag);
                                 break;
                             case 'private':
                                 post.private = value.toLowerCase() === 'true';
@@ -456,23 +313,18 @@
         function displayPosts(posts) {
             const blogList = document.getElementById('blog-list');
             
-            // Filter posts based on login status and private post visibility
-            let filteredPosts = posts;
-            if (!isLoggedIn || !showPrivatePosts) {
-                filteredPosts = posts.filter(post => !post.private);
-            }
-            
-            if (filteredPosts.length === 0) {
-                blogList.innerHTML = '<p style="text-align: center; color: #bdbdbd;">No blog posts found.</p>';
+            if (posts.length === 0) {
+                showNoPosts('No blog posts found. Use the admin panel to create your first post!');
                 return;
             }
 
-            blogList.innerHTML = filteredPosts.map(post => `
+            blogList.innerHTML = posts.map(post => `
                 <article class="blog-post">
                     <a href="blog-post.html?slug=${post.slug}">
-                        <img src="${post.image}" alt="${post.title} thumbnail" onerror="this.src='https://via.placeholder.com/400x200'">
+                        <img src="${post.image}" alt="${post.title} thumbnail" 
+                             onerror="this.src='https://via.placeholder.com/400x200?text=Blog+Post'">
                         <div class="blog-post-content">
-                            <h2>${post.title} ${post.private ? '🔒' : ''}</h2>
+                            <h2>${post.title}</h2>
                             <div class="blog-post-meta">
                                 <time datetime="${post.date}">${formatDate(post.date)}</time>
                                 ${post.tags.length > 0 ? `<span style="margin-left: 10px;">Tags: ${post.tags.join(', ')}</span>` : ''}
@@ -484,6 +336,33 @@
             `).join('');
         }
 
+        // Show no posts message
+        function showNoPosts(message) {
+            const blogList = document.getElementById('blog-list');
+            blogList.innerHTML = `
+                <div class="no-posts">
+                    <h3>📝 No Posts Yet</h3>
+                    <p>${message}</p>
+                    <p style="margin-top: 20px;">
+                        <a href="#" onclick="openAdmin()" style="color: #4caf50; text-decoration: underline;">
+                            Click here to access the admin panel
+                        </a>
+                    </p>
+                </div>
+            `;
+        }
+
+        // Show error message
+        function showError(message) {
+            const blogList = document.getElementById('blog-list');
+            blogList.innerHTML = `
+                <div class="error-message">
+                    ⚠️ ${message}<br>
+                    <small>Make sure your GitHub repository settings are correct.</small>
+                </div>
+            `;
+        }
+
         // Format date for display
         function formatDate(dateString) {
             const date = new Date(dateString);
@@ -493,12 +372,6 @@
                 day: 'numeric' 
             });
         }
-
-        // Load posts when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            checkLoginStatus();
-            loadBlogPosts();
-        });
     </script>
 </body>
 </html>
