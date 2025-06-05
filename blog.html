@@ -178,12 +178,10 @@
         // Configuration - UPDATE WITH YOUR DETAILS
         const GITHUB_USERNAME = 'cornato55';
         const REPO_NAME = 'cornato55.github.io';
-        const PRIVATE_ADMIN_REPO = 'blog-admin-secure';
 
-        // Open private admin in new tab
+        // Open admin page
         function openAdmin() {
-            const adminUrl = `https://github.com/${GITHUB_USERNAME}/${PRIVATE_ADMIN_REPO}/blob/main/admin.html`;
-            window.open(adminUrl, '_blank');
+            window.location.href = 'admin.html';
         }
 
         // Load blog posts on page load
@@ -344,7 +342,7 @@
                     <h3>📝 No Posts Yet</h3>
                     <p>${message}</p>
                     <p style="margin-top: 20px;">
-                        <a href="#" onclick="openAdmin()" style="color: #4caf50; text-decoration: underline;">
+                        <a href="admin.html" style="color: #4caf50; text-decoration: underline;">
                             Click here to access the admin panel
                         </a>
                     </p>
