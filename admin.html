@@ -61,7 +61,7 @@
             color: #ffffff;
             font-weight: 500;
         }
-        input[type="text"], input[type="password"], textarea {
+        input[type="text"], input[type="password"], textarea, select {
             width: 100%;
             padding: 12px;
             background-color: #2a2a2a;
@@ -72,7 +72,7 @@
             font-size: 14px;
             transition: border-color 0.3s ease;
         }
-        input:focus, textarea:focus {
+        input:focus, textarea:focus, select:focus {
             outline: none;
             border-color: #64b5f6;
             box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.1);
@@ -149,6 +149,92 @@
             resize: vertical;
             font-family: 'Consolas', 'Monaco', monospace;
         }
+        .tab-navigation {
+            display: flex;
+            gap: 5px;
+            background: linear-gradient(135deg, #2a2a2a, #333);
+            border-radius: 8px;
+            padding: 5px;
+            margin-bottom: 30px;
+        }
+        .tab-btn {
+            background: transparent;
+            color: #bdbdbd;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+        .tab-btn:hover {
+            background-color: rgba(100, 181, 246, 0.1);
+            color: #64b5f6;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #64b5f6, #42a5f5);
+            color: white;
+            box-shadow: 0 4px 15px rgba(100, 181, 246, 0.3);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .project-selector {
+            background: linear-gradient(135deg, #2a2a2a, #333);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff9800;
+        }
+        .project-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .project-item {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #404040;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .project-item:hover {
+            border-color: #64b5f6;
+            background-color: #333;
+        }
+        .project-item.selected {
+            border-color: #4caf50;
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+        .project-item h4 {
+            margin: 0 0 8px 0;
+            color: #ffffff;
+            font-size: 14px;
+        }
+        .project-item p {
+            margin: 0;
+            color: #bdbdbd;
+            font-size: 12px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+        .status-planning { background-color: rgba(255, 152, 0, 0.2); color: #ff9800; }
+        .status-development { background-color: rgba(33, 150, 243, 0.2); color: #2196f3; }
+        .status-testing { background-color: rgba(156, 39, 176, 0.2); color: #9c27b0; }
+        .status-launch { background-color: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .status-maintenance { background-color: rgba(158, 158, 158, 0.2); color: #9e9e9e; }
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -158,8 +244,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔒 Secure Blog Admin</h1>
-            <p style="margin: 0; color: #bdbdbd;">Secure blog management with encrypted credentials</p>
+            <h1>🔒 Secure Admin Panel</h1>
+            <p style="margin: 0; color: #bdbdbd;">Secure content management with encrypted credentials</p>
         </div>
 
         <div class="security-notice">
@@ -237,10 +323,13 @@
         <!-- Admin Panel -->
         <div class="admin-panel" id="admin-panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap;">
-                <h2>✅ Blog Management</h2>
+                <h2>✅ Content Management</h2>
                 <div>
                     <a href="blog.html" target="_blank" class="btn btn-secondary" style="width: auto; margin-right: 10px;">
                         🌐 View Blog
+                    </a>
+                    <a href="projects.html" target="_blank" class="btn btn-secondary" style="width: auto; margin-right: 10px;">
+                        🚀 View Projects
                     </a>
                     <button onclick="logout()" class="btn btn-danger" style="width: auto;">
                         🚪 Logout
@@ -248,48 +337,55 @@
                 </div>
             </div>
 
-            <!-- Blog Post Editor -->
-            <div style="background: linear-gradient(135deg, #2a2a2a, #333); padding: 25px; border-radius: 12px; margin-bottom: 25px;">
-                <h3>📝 Create New Blog Post</h3>
-                
-                <div class="form-group">
-                    <label for="post-title">Post Title</label>
-                    <input type="text" id="post-title" placeholder="Enter your blog post title">
-                </div>
-                
-                <div class="form-group">
-                    <label for="post-excerpt">Excerpt</label>
-                    <input type="text" id="post-excerpt" placeholder="Brief description of your post">
-                </div>
-                
-                <div class="form-group">
-                    <label for="post-image">Featured Image URL</label>
-                    <input type="text" id="post-image" placeholder="https://example.com/image.jpg or leave blank for default">
-                </div>
-                
-                <div class="form-group">
-                    <label for="post-tags">Tags (comma-separated)</label>
-                    <input type="text" id="post-tags" placeholder="web development, javascript, tutorial">
-                </div>
-                
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="post-private" style="margin-right: 8px;">
-                        Private Post (only visible when logged in)
-                    </label>
-                </div>
-                
-                <div class="form-group">
-                    <label for="post-content">Content (Markdown)</label>
-                    <div class="toolbar">
-                        <button type="button" onclick="insertMarkdown('**', '**')" class="btn btn-secondary">Bold</button>
-                        <button type="button" onclick="insertMarkdown('*', '*')" class="btn btn-secondary">Italic</button>
-                        <button type="button" onclick="insertMarkdown('## ', '')" class="btn btn-secondary">Header</button>
-                        <button type="button" onclick="insertMarkdown('- ', '')" class="btn btn-secondary">List</button>
-                        <button type="button" onclick="insertMarkdown('[', '](url)')" class="btn btn-secondary">Link</button>
-                        <button type="button" onclick="insertMarkdown('![', '](image-url)')" class="btn btn-secondary">Image</button>
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" onclick="switchTab('blog')">📝 Blog Posts</button>
+                <button class="tab-btn" onclick="switchTab('projects')">🚀 Projects</button>
+            </div>
+
+            <!-- Blog Tab -->
+            <div class="tab-content active" id="blog-tab">
+                <div style="background: linear-gradient(135deg, #2a2a2a, #333); padding: 25px; border-radius: 12px; margin-bottom: 25px;">
+                    <h3>📝 Create New Blog Post</h3>
+                    
+                    <div class="form-group">
+                        <label for="post-title">Post Title</label>
+                        <input type="text" id="post-title" placeholder="Enter your blog post title">
                     </div>
-                    <textarea id="post-content" placeholder="Write your blog post content here...
+                    
+                    <div class="form-group">
+                        <label for="post-excerpt">Excerpt</label>
+                        <input type="text" id="post-excerpt" placeholder="Brief description of your post">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="post-image">Featured Image URL</label>
+                        <input type="text" id="post-image" placeholder="https://example.com/image.jpg or leave blank for default">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="post-tags">Tags (comma-separated)</label>
+                        <input type="text" id="post-tags" placeholder="web development, javascript, tutorial">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="post-private" style="margin-right: 8px;">
+                            Private Post (only visible when logged in)
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="post-content">Content (Markdown)</label>
+                        <div class="toolbar">
+                            <button type="button" onclick="insertMarkdown('**', '**')" class="btn btn-secondary">Bold</button>
+                            <button type="button" onclick="insertMarkdown('*', '*')" class="btn btn-secondary">Italic</button>
+                            <button type="button" onclick="insertMarkdown('## ', '')" class="btn btn-secondary">Header</button>
+                            <button type="button" onclick="insertMarkdown('- ', '')" class="btn btn-secondary">List</button>
+                            <button type="button" onclick="insertMarkdown('[', '](url)')" class="btn btn-secondary">Link</button>
+                            <button type="button" onclick="insertMarkdown('![', '](image-url)')" class="btn btn-secondary">Image</button>
+                        </div>
+                        <textarea id="post-content" placeholder="Write your blog post content here...
 
 Examples:
 # Main Header
@@ -300,24 +396,158 @@ Examples:
 - List item
 
 Your post will be saved to your blog automatically!"></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap;">
+                        <button onclick="previewPost()" class="btn btn-secondary" style="width: auto;">👁️ Preview</button>
+                        <button onclick="savePost()" class="btn btn-success" style="width: auto;">💾 Publish Post</button>
+                        <button onclick="clearForm()" class="btn btn-secondary" style="width: auto;">🗑️ Clear</button>
+                    </div>
+                    
+                    <div id="preview-area" style="display: none; background: #2a2a2a; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #404040;">
+                        <h4>👁️ Preview:</h4>
+                        <div id="preview-content"></div>
+                    </div>
                 </div>
-                
-                <div style="display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap;">
-                    <button onclick="previewPost()" class="btn btn-secondary" style="width: auto;">👁️ Preview</button>
-                    <button onclick="savePost()" class="btn btn-success" style="width: auto;">💾 Publish Post</button>
-                    <button onclick="clearForm()" class="btn btn-secondary" style="width: auto;">🗑️ Clear</button>
+            </div>
+
+            <!-- Projects Tab -->
+            <div class="tab-content" id="projects-tab">
+                <!-- Create New Project -->
+                <div style="background: linear-gradient(135deg, #2a2a2a, #333); padding: 25px; border-radius: 12px; margin-bottom: 25px;">
+                    <h3>🚀 Create New Project</h3>
+                    
+                    <div class="form-group">
+                        <label for="project-title">Project Title</label>
+                        <input type="text" id="project-title" placeholder="My Awesome Project">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project-description">Brief Description</label>
+                        <textarea id="project-description" style="height: 100px;" placeholder="A brief overview of what this project does and why it's awesome..."></textarea>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label for="project-status">Status</label>
+                            <select id="project-status">
+                                <option value="planning">🟡 Planning</option>
+                                <option value="development" selected>🔵 Development</option>
+                                <option value="testing">🟣 Testing</option>
+                                <option value="launch">🟢 Launched</option>
+                                <option value="maintenance">⚪ Maintenance</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="project-thumbnail">Thumbnail URL</label>
+                            <input type="text" id="project-thumbnail" placeholder="https://example.com/image.jpg (optional)">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project-tech">Tech Stack (comma-separated)</label>
+                        <input type="text" id="project-tech" placeholder="JavaScript, React, Node.js, MongoDB">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project-tags">Tags (comma-separated)</label>
+                        <input type="text" id="project-tags" placeholder="web-dev, javascript, full-stack">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label for="project-github">GitHub URL (optional)</label>
+                            <input type="text" id="project-github" placeholder="https://github.com/username/repo">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="project-demo">Demo URL (optional)</label>
+                            <input type="text" id="project-demo" placeholder="https://my-project.com">
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap;">
+                        <button onclick="createProject()" class="btn btn-success" style="width: auto;">🚀 Create Project</button>
+                        <button onclick="clearProjectForm()" class="btn btn-secondary" style="width: auto;">🗑️ Clear</button>
+                    </div>
                 </div>
-                
-                <div id="preview-area" style="display: none; background: #2a2a2a; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #404040;">
-                    <h4>👁️ Preview:</h4>
-                    <div id="preview-content"></div>
+
+                <!-- Add Update to Existing Project -->
+                <div style="background: linear-gradient(135deg, #2a2a2a, #333); padding: 25px; border-radius: 12px; margin-bottom: 25px;">
+                    <h3>📝 Add Update to Project</h3>
+                    
+                    <div class="project-selector">
+                        <h4 style="margin-top: 0; color: #ff9800;">📂 Select Project to Update:</h4>
+                        <p style="margin-bottom: 15px; color: #bdbdbd;">Choose a project to add a new update, progress report, or milestone.</p>
+                        
+                        <div class="project-list" id="project-list">
+                            <div class="project-item">
+                                <h4>No Projects Yet</h4>
+                                <p>Create your first project using the form above!</p>
+                                <span class="status-badge status-planning">Ready to start</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="update-form" style="display: none;">
+                        <div class="form-group">
+                            <label for="update-title">Update Title</label>
+                            <input type="text" id="update-title" placeholder="Progress Update #1, Bug Fixes, New Feature Added">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="update-type">Update Type</label>
+                            <select id="update-type">
+                                <option value="progress">📈 Progress Update</option>
+                                <option value="feature">✨ New Feature</option>
+                                <option value="bugfix">🐛 Bug Fix</option>
+                                <option value="milestone">🎯 Milestone</option>
+                                <option value="release">🚀 Release</option>
+                                <option value="planning">📋 Planning</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="update-content">Update Content (Markdown)</label>
+                            <div class="toolbar">
+                                <button type="button" onclick="insertUpdateMarkdown('**', '**')" class="btn btn-secondary">Bold</button>
+                                <button type="button" onclick="insertUpdateMarkdown('*', '*')" class="btn btn-secondary">Italic</button>
+                                <button type="button" onclick="insertUpdateMarkdown('## ', '')" class="btn btn-secondary">Header</button>
+                                <button type="button" onclick="insertUpdateMarkdown('- ', '')" class="btn btn-secondary">List</button>
+                                <button type="button" onclick="insertUpdateMarkdown('[', '](url)')" class="btn btn-secondary">Link</button>
+                                <button type="button" onclick="insertUpdateMarkdown('![', '](image-url)')" class="btn btn-secondary">Image</button>
+                                <button type="button" onclick="insertUpdateMarkdown('```\n', '\n```')" class="btn btn-secondary">Code</button>
+                            </div>
+                            <textarea id="update-content" style="height: 250px;" placeholder="Describe what you've accomplished, challenges faced, next steps...
+
+## What I accomplished:
+- Built the user authentication system
+- Fixed performance issues with the database
+
+## Challenges:
+- Had trouble with API rate limiting
+
+## Next steps:
+- Implement user profiles
+- Add testing coverage
+
+## Screenshots:
+![Feature demo](screenshot-url)"></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap;">
+                            <button onclick="addProjectUpdate()" class="btn btn-success" style="width: auto;">📝 Add Update</button>
+                            <button onclick="clearUpdateForm()" class="btn btn-secondary" style="width: auto;">🗑️ Clear</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Quick Actions -->
             <div style="background: linear-gradient(135deg, #2a2a2a, #333); padding: 25px; border-radius: 12px;">
                 <h3>⚡ Quick Actions</h3>
-                <p style="color: #bdbdbd;">More features coming soon! For now, you can create and publish blog posts.</p>
+                <p style="color: #bdbdbd;">Manage your content and check system status.</p>
                 <button onclick="refreshStatus()" class="btn btn-secondary" style="width: auto;">🔄 Refresh Status</button>
             </div>
         </div>
@@ -331,6 +561,8 @@ Your post will be saved to your blog automatically!"></textarea>
         
         let isAuthenticated = false;
         let githubConfig = {};
+        let selectedProject = null;
+        let loadedProjects = [];
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -432,6 +664,9 @@ Your post will be saved to your blog automatically!"></textarea>
                 
                 showSuccess('🎉 Welcome! You are now logged in.');
                 
+                // Load projects for the project management tab
+                loadProjects();
+                
             } catch (error) {
                 showError('Authentication failed');
             }
@@ -440,6 +675,8 @@ Your post will be saved to your blog automatically!"></textarea>
         function logout() {
             isAuthenticated = false;
             githubConfig = {};
+            selectedProject = null;
+            loadedProjects = [];
             
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('admin-panel').style.display = 'none';
@@ -447,6 +684,8 @@ Your post will be saved to your blog automatically!"></textarea>
             document.getElementById('login-password').value = '';
             
             clearForm();
+            clearProjectForm();
+            clearUpdateForm();
         }
 
         function resetAdmin() {
@@ -456,6 +695,23 @@ Your post will be saved to your blog automatically!"></textarea>
             }
         }
 
+        // Tab Management
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Load projects if switching to projects tab
+            if (tabName === 'projects' && isAuthenticated) {
+                loadProjects();
+            }
+        }
+
+        // Blog Functions
         function insertMarkdown(before, after) {
             const textarea = document.getElementById('post-content');
             const start = textarea.selectionStart;
@@ -547,6 +803,332 @@ ${content}`;
             } catch (error) {
                 showError('Failed to save post: ' + error.message);
             }
+        }
+
+        // Project Management Functions
+        async function loadProjects() {
+            try {
+                const response = await fetch(`https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/projects`, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const folders = await response.json();
+                    const projectFolders = folders.filter(item => item.type === 'dir');
+                    
+                    loadedProjects = [];
+                    
+                    // Load project metadata for each folder
+                    for (const folder of projectFolders) {
+                        try {
+                            const projectResponse = await fetch(`https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/projects/${folder.name}/project.json`, {
+                                headers: {
+                                    'Authorization': `token ${githubConfig.token}`
+                                }
+                            });
+                            
+                            if (projectResponse.ok) {
+                                const projectFile = await projectResponse.json();
+                                const projectData = JSON.parse(atob(projectFile.content));
+                                projectData.slug = folder.name;
+                                loadedProjects.push(projectData);
+                            }
+                        } catch (error) {
+                            console.error(`Error loading project ${folder.name}:`, error);
+                        }
+                    }
+                    
+                    displayProjectList();
+                } else {
+                    // Projects folder doesn't exist yet
+                    loadedProjects = [];
+                    displayProjectList();
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                showError('Failed to load projects: ' + error.message);
+            }
+        }
+
+        function displayProjectList() {
+            const projectList = document.getElementById('project-list');
+            
+            if (loadedProjects.length === 0) {
+                projectList.innerHTML = `
+                    <div class="project-item">
+                        <h4>No Projects Yet</h4>
+                        <p>Create your first project using the form above!</p>
+                        <span class="status-badge status-planning">Ready to start</span>
+                    </div>
+                `;
+                return;
+            }
+
+            projectList.innerHTML = loadedProjects.map(project => `
+                <div class="project-item" onclick="selectProject('${project.slug}')">
+                    <h4>${project.title}</h4>
+                    <p>${project.description.substring(0, 100)}${project.description.length > 100 ? '...' : ''}</p>
+                    <span class="status-badge status-${project.status}">${formatStatus(project.status)}</span>
+                </div>
+            `).join('');
+        }
+
+        function selectProject(slug) {
+            selectedProject = slug;
+            
+            // Update visual selection
+            document.querySelectorAll('.project-item').forEach(item => item.classList.remove('selected'));
+            event.target.closest('.project-item').classList.add('selected');
+            
+            // Show update form
+            document.getElementById('update-form').style.display = 'block';
+            
+            showSuccess(`✅ Selected project: ${loadedProjects.find(p => p.slug === slug)?.title || slug}`);
+        }
+
+        async function createProject() {
+            if (!isAuthenticated) {
+                showError('Please login first');
+                return;
+            }
+
+            const title = document.getElementById('project-title').value.trim();
+            const description = document.getElementById('project-description').value.trim();
+            const status = document.getElementById('project-status').value;
+            const thumbnail = document.getElementById('project-thumbnail').value.trim();
+            const tech = document.getElementById('project-tech').value.trim();
+            const tags = document.getElementById('project-tags').value.trim();
+            const githubUrl = document.getElementById('project-github').value.trim();
+            const demoUrl = document.getElementById('project-demo').value.trim();
+
+            if (!title || !description) {
+                showError('Project title and description are required');
+                return;
+            }
+
+            const slug = title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+            const date = new Date().toISOString().split('T')[0];
+
+            // Create project.json
+            const projectData = {
+                title: title,
+                description: description,
+                status: status,
+                created: date,
+                thumbnail: thumbnail || `https://via.placeholder.com/400x200/2a2a2a/ffffff?text=${encodeURIComponent(title)}`,
+                tech: tech ? tech.split(',').map(t => t.trim()) : [],
+                tags: tags ? tags.split(',').map(t => t.trim()) : [],
+                links: {
+                    github: githubUrl,
+                    demo: demoUrl
+                }
+            };
+
+            // Create README.md template
+            const readmeContent = `# ${title}
+
+${description}
+
+## Overview
+*This section will contain a detailed overview of the project.*
+
+## Tech Stack
+${projectData.tech.map(t => `- ${t}`).join('\n')}
+
+## Features
+- Feature 1
+- Feature 2
+- Feature 3
+
+## Installation
+\`\`\`bash
+# Installation instructions here
+\`\`\`
+
+## Usage
+\`\`\`bash
+# Usage examples here
+\`\`\`
+
+## Links
+${githubUrl ? `- [GitHub Repository](${githubUrl})` : ''}
+${demoUrl ? `- [Live Demo](${demoUrl})` : ''}
+
+## Updates
+Check the \`updates/\` folder for progress reports and development updates.
+`;
+
+            // Create initial update
+            const placeholderUpdate = `# Initial Project Setup
+
+Project "${title}" has been created!
+
+## Project Goals
+${description}
+
+## Next Steps
+- Set up development environment
+- Create initial project structure
+- Begin development
+
+*This is the first update for this project. Future updates will track progress, challenges, and milestones.*
+`;
+
+            try {
+                // Create project.json
+                await fetch(`https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/projects/${slug}/project.json`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Create new project: ${title}`,
+                        content: btoa(JSON.stringify(projectData, null, 2))
+                    })
+                });
+
+                // Create README.md
+                await fetch(`https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/projects/${slug}/README.md`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Add README for project: ${title}`,
+                        content: btoa(readmeContent)
+                    })
+                });
+
+                // Create initial update
+                await fetch(`https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/projects/${slug}/updates/${date}-initial-setup.md`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Add initial update for project: ${title}`,
+                        content: btoa(placeholderUpdate)
+                    })
+                });
+
+                showSuccess(`🎉 Project "${title}" created successfully!`);
+                clearProjectForm();
+                loadProjects(); // Refresh project list
+
+            } catch (error) {
+                showError('Failed to create project: ' + error.message);
+            }
+        }
+
+        async function addProjectUpdate() {
+            if (!isAuthenticated) {
+                showError('Please login first');
+                return;
+            }
+
+            if (!selectedProject) {
+                showError('Please select a project first');
+                return;
+            }
+
+            const title = document.getElementById('update-title').value.trim();
+            const type = document.getElementById('update-type').value;
+            const content = document.getElementById('update-content').value.trim();
+
+            if (!title || !content) {
+                showError('Update title and content are required');
+                return;
+            }
+
+            const date = new Date().toISOString().split('T')[0];
+            const time = new Date().toISOString().split('T')[1].split('.')[0].replace(/:/g, '-');
+            const filename = `${date}-${time}-${title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}.md`;
+            
+            const updateContent = `---
+title: "${title}"
+date: ${date}
+type: ${type}
+project: ${selectedProject}
+---
+
+# ${title}
+
+${content}
+
+---
+*Update added on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}*
+`;
+
+            try {
+                await fetch(`https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/projects/${selectedProject}/updates/${filename}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Add update to ${selectedProject}: ${title}`,
+                        content: btoa(updateContent)
+                    })
+                });
+
+                showSuccess(`🎉 Update "${title}" added to ${selectedProject}!`);
+                clearUpdateForm();
+
+            } catch (error) {
+                showError('Failed to add update: ' + error.message);
+            }
+        }
+
+        function insertUpdateMarkdown(before, after) {
+            const textarea = document.getElementById('update-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            const replacement = before + selectedText + after;
+            
+            textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.selectionStart = start + before.length;
+            textarea.selectionEnd = start + before.length + selectedText.length;
+            textarea.focus();
+        }
+
+        function formatStatus(status) {
+            const statusMap = {
+                'planning': 'Planning',
+                'development': 'Development',
+                'testing': 'Testing',
+                'launch': 'Launched',
+                'maintenance': 'Maintenance'
+            };
+            return statusMap[status] || status;
+        }
+
+        function clearProjectForm() {
+            document.getElementById('project-title').value = '';
+            document.getElementById('project-description').value = '';
+            document.getElementById('project-status').value = 'development';
+            document.getElementById('project-thumbnail').value = '';
+            document.getElementById('project-tech').value = '';
+            document.getElementById('project-tags').value = '';
+            document.getElementById('project-github').value = '';
+            document.getElementById('project-demo').value = '';
+        }
+
+        function clearUpdateForm() {
+            document.getElementById('update-title').value = '';
+            document.getElementById('update-type').value = 'progress';
+            document.getElementById('update-content').value = '';
+            
+            // Clear project selection
+            selectedProject = null;
+            document.querySelectorAll('.project-item').forEach(item => item.classList.remove('selected'));
+            document.getElementById('update-form').style.display = 'none';
         }
 
         function refreshStatus() {
