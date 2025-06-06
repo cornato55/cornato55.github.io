@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project - Collin D. Cortez</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+        }
+        header {
+            background-color: #1f1f1f;
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        nav li {
+            margin-right: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 300;
+            transition: color 0.3s ease;
+        }
+        nav a:hover, nav a.active {
+            color: #64b5f6;
+        }
+        .admin-link {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: transparent;
+            color: transparent;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            opacity: 0.1;
+            transition: opacity 0.3s ease;
+            text-decoration: none;
+        }
+        .admin-link:hover {
+            opacity: 1;
+            background-color: rgba(76, 175, 80, 0.8);
+            color: white;
+        }
+        main {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .back-link {
+            color: #64b5f6;
+            text-decoration: none;
+            margin-bottom: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s ease;
+        }
+        .back-link:hover {
+            color: #42a5f5;
+        }
+        .project-header {
+            background-color: #1f1f1f;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .project-title {
+            font-size: 2.5em;
+            color: #ffffff;
+            margin: 0 0 15px 0;
+            line-height: 1.2;
+        }
+        .project-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-planning { background-color: rgba(255, 152, 0, 0.2); color: #ff9800; border: 1px solid #ff9800; }
+        .status-development { background-color: rgba(33, 150, 243, 0.2); color: #2196f3; border: 1px solid #2196f3; }
+        .status-testing { background-color: rgba(156, 39, 176, 0.2); color: #9c27b0; border: 1px solid #9c27b0; }
+        .status-launch { background-color: rgba(76, 175, 80, 0.2); color: #4caf50; border: 1px solid #4caf50; }
+        .status-maintenance { background-color: rgba(158, 158, 158, 0.2); color: #9e9e9e; border: 1px solid #9e9e9e; }
+        .project-dates {
+            color: #bdbdbd;
+        }
+        .project-description {
+            font-size: 1.1em;
+            color: #e0e0e0;
+            margin-bottom: 25px;
+            line-height: 1.7;
+        }
+        .project-tech {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .tech-tag {
+            background-color: #2a2a2a;
+            color: #64b5f6;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            border: 1px solid #404040;
+            font-weight: 500;
+        }
+        .project-links {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #64b5f6;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid #64b5f6;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        .project-link:hover {
+            background-color: #64b5f6;
+            color: #121212;
+        }
+        .project-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .project-tag {
+            background-color: rgba(100, 181, 246, 0.1);
+            color: #64b5f6;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            border: 1px solid rgba(100, 181, 246, 0.3);
+        }
+        .content-section {
+            background-color: #1f1f1f;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .section-header {
+            background-color: #2a2a2a;
+            padding: 20px 30px;
+            border-bottom: 1px solid #404040;
+        }
+        .section-title {
+            margin: 0;
+            color: #ffffff;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-content {
+            padding: 30px;
+        }
+        .readme-content {
+            line-height: 1.8;
+            font-size: 1em;
+        }
+        .readme-content h1, .readme-content h2, .readme-content h3 {
+            color: #ffffff;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        .readme-content h1 {
+            font-size: 2em;
+            border-bottom: 2px solid #64b5f6;
+            padding-bottom: 10px;
+        }
+        .readme-content h2 {
+            font-size: 1.5em;
+            color: #64b5f6;
+        }
+        .readme-content h3 {
+            font-size: 1.2em;
+        }
+        .readme-content p {
+            margin-bottom: 20px;
+        }
+        .readme-content ul, .readme-content ol {
+            margin-bottom: 20px;
+            padding-left: 30px;
+        }
+        .readme-content li {
+            margin-bottom: 8px;
+        }
+        .readme-content blockquote {
+            border-left: 4px solid #64b5f6;
+            padding: 15px 20px;
+            margin: 20px 0;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            font-style: italic;
+        }
+        .readme-content code {
+            background-color: #2a2a2a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+        .readme-content pre {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid #404040;
+        }
+        .readme-content pre code {
+            background: none;
+            padding: 0;
+        }
+        .readme-content a {
+            color: #64b5f6;
+            text-decoration: none;
+        }
+        .readme-content a:hover {
+            text-decoration: underline;
+        }
+        .readme-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .updates-timeline {
+            position: relative;
+        }
+        .timeline-item {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .timeline-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 8px;
+            width: 2px;
+            height: calc(100% + 15px);
+            background-color: #404040;
+        }
+        .timeline-item:last-child::before {
+            height: 25px;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: 6px;
+            top: 6px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #64b5f6;
+            background-color: #1f1f1f;
+            z-index: 1;
+        }
+        .update-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .update-title {
+            color: #ffffff;
+            font-size: 1.1em;
+            margin: 0;
+            font-weight: 600;
+        }
+        .update-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 13px;
+            color: #bdbdbd;
+        }
+        .update-type {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .type-progress { background-color: rgba(33, 150, 243, 0.2); color: #2196f3; }
+        .type-feature { background-color: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .type-bugfix { background-color: rgba(244, 67, 54, 0.2); color: #f44336; }
+        .type-milestone { background-color: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .type-release { background-color: rgba(156, 39, 176, 0.2); color: #9c27b0; }
+        .type-planning { background-color: rgba(255, 152, 0, 0.2); color: #ff9800; }
+        .update-content {
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        .update-content h1, .update-content h2, .update-content h3 {
+            color: #ffffff;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .update-content h2 {
+            color: #64b5f6;
+            font-size: 1.2em;
+        }
+        .update-content ul, .update-content ol {
+            padding-left: 20px;
+        }
+        .update-content code {
+            background-color: #2a2a2a;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .update-content pre {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid #404040;
+        }
+        .loading {
+            text-align: center;
+            color: #bdbdbd;
+            font-style: italic;
+            padding: 60px 20px;
+        }
+        .error-message {
+            background-color: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            color: #f44336;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 40px 0;
+        }
+        .error-message h3 {
+            margin-top: 0;
+            color: #f44336;
+        }
+        .no-updates {
+            text-align: center;
+            color: #bdbdbd;
+            font-style: italic;
+            padding: 40px;
+        }
+        footer {
+            background-color: #1f1f1f;
+            color: #bdbdbd;
+            text-align: center;
+            padding: 20px;
+            margin-top: 60px;
+        }
+        .footer-links {
+            margin-bottom: 10px;
+        }
+        .footer-links a {
+            color: #64b5f6;
+            margin: 0 10px;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .project-header {
+                padding: 25px;
+            }
+            .project-title {
+                font-size: 2em;
+            }
+            .section-content {
+                padding: 20px;
+            }
+            .project-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .project-links {
+                flex-direction: column;
+            }
+            main {
+                padding: 0 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Me</a></li>
+                <li><a href="projects.html" class="active">Projects</a></li>
+                <li><a href="blog.html">Blog</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <!-- Hidden admin link -->
+    <a href="admin.html" class="admin-link">🔒</a>
+    
+    <main>
+        <a href="projects.html" class="back-link">← Back to Projects</a>
+        
+        <div id="loading" class="loading">Loading project...</div>
+        
+        <div id="project-content" style="display: none;">
+            <!-- Project Header -->
+            <div class="project-header">
+                <h1 class="project-title" id="project-title">Project Title</h1>
+                
+                <div class="project-meta">
+                    <span class="status-badge" id="project-status">Development</span>
+                    <div class="project-dates">
+                        <span>Created: <span id="project-created">2024-01-01</span></span>
+                        <span style="margin-left: 20px;">Last updated: <span id="project-updated">2024-01-01</span></span>
+                    </div>
+                </div>
+                
+                <p class="project-description" id="project-description">Project description will be loaded here.</p>
+                
+                <div class="project-tech" id="project-tech">
+                    <!-- Tech stack will be loaded here -->
+                </div>
+                
+                <div class="project-links" id="project-links">
+                    <!-- Project links will be loaded here -->
+                </div>
+                
+                <div class="project-tags" id="project-tags">
+                    <!-- Project tags will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Project Overview -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">📋 Project Overview</h2>
+                </div>
+                <div class="section-content">
+                    <div class="readme-content" id="readme-content">
+                        Loading project details...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Updates -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">📝 Project Updates</h2>
+                </div>
+                <div class="section-content">
+                    <div class="updates-timeline" id="updates-timeline">
+                        Loading updates...
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="error-message" class="error-message" style="display: none;">
+            <h3>Project Not Found</h3>
+            <p>The project you're looking for doesn't exist or may have been removed.</p>
+            <a href="projects.html" style="color: #64b5f6;">← Return to Projects</a>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-links">
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="terms-of-service.html">Terms of Service</a>
+            <a href="contact.html">Contact</a>
+        </div>
+        <p>&copy; 2024 Collin D. Cortez. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Configuration
+        const GITHUB_USERNAME = 'cornato55';
+        const REPO_NAME = 'cornato55.github.io';
+
+        // Get project slug from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectSlug = urlParams.get('slug');
+
+        // Load project on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (projectSlug) {
+                loadProject(projectSlug);
+            } else {
+                showError('No project specified');
+            }
+        });
+
+        async function loadProject(slug) {
+            const loadingDiv = document.getElementById('loading');
+            const contentDiv = document.getElementById('project-content');
+            const errorDiv = document.getElementById('error-message');
+
+            try {
+                // Load project metadata
+                const projectResponse = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/projects/${slug}/project.json`);
+                
+                if (!projectResponse.ok) {
+                    throw new Error('Project not found');
+                }
+
+                const projectFile = await projectResponse.json();
+                const projectData = JSON.parse(atob(projectFile.content));
+
+                // Update page title
+                document.title = `${projectData.title} - Collin D. Cortez`;
+
+                // Display project header
+                displayProjectHeader(projectData, slug);
+
+                // Load README content
+                await loadReadme(slug);
+
+                // Load project updates
+                await loadUpdates(slug);
+                
+                loadingDiv.style.display = 'none';
+                contentDiv.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading project:', error);
+                loadingDiv.style.display = 'none';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function displayProjectHeader(project, slug) {
+            // Set title and description
+            document.getElementById('project-title').textContent = project.title;
+            document.getElementById('project-description').textContent = project.description;
+            
+            // Set status
+            const statusElement = document.getElementById('project-status');
+            statusElement.textContent = formatStatus(project.status);
+            statusElement.className = `status-badge status-${project.status}`;
+            
+            // Set dates
+            document.getElementById('project-created').textContent = formatDate(project.created);
+            
+            // Set tech stack
+            const techContainer = document.getElementById('project-tech');
+            techContainer.innerHTML = project.tech.map(tech => 
+                `<span class="tech-tag">${tech}</span>`
+            ).join('');
+            
+            // Set project links
+            const linksContainer = document.getElementById('project-links');
+            const links = [];
+            
+            if (project.links?.github) {
+                links.push(`<a href="${project.links.github}" target="_blank" class="project-link">
+                    📋 GitHub Repository
+                </a>`);
+            }
+            
+            if (project.links?.demo) {
+                links.push(`<a href="${project.links.demo}" target="_blank" class="project-link">
+                    🌐 Live Demo
+                </a>`);
+            }
+            
+            linksContainer.innerHTML = links.join('');
+            
+            // Set tags
+            const tagsContainer = document.getElementById('project-tags');
+            tagsContainer.innerHTML = project.tags.map(tag => 
+                `<span class="project-tag">${tag}</span>`
+            ).join('');
+        }
+
+        async function loadReadme(slug) {
+            try {
+                const readmeResponse = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/projects/${slug}/README.md`);
+                
+                if (readmeResponse.ok) {
+                    const readmeFile = await readmeResponse.json();
+                    const readmeContent = atob(readmeFile.content);
+                    
+                    // Parse markdown and display
+                    const htmlContent = marked.parse(readmeContent);
+                    document.getElementById('readme-content').innerHTML = htmlContent;
+                } else {
+                    document.getElementById('readme-content').innerHTML = `
+                        <p style="color: #bdbdbd; font-style: italic;">
+                            No detailed project information available yet.
+                        </p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading README:', error);
+                document.getElementById('readme-content').innerHTML = `
+                    <p style="color: #f44336;">
+                        Error loading project details.
+                    </p>
+                `;
+            }
+        }
+
+        async function loadUpdates(slug) {
+            try {
+                const updatesResponse = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/projects/${slug}/updates`);
+                
+                if (!updatesResponse.ok) {
+                    document.getElementById('updates-timeline').innerHTML = `
+                        <div class="no-updates">
+                            <p>No project updates yet.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const updateFiles = await updatesResponse.json();
+                const markdownFiles = updateFiles
+                    .filter(file => file.name.endsWith('.md'))
+                    .sort((a, b) => b.name.localeCompare(a.name)); // Sort by name (newest first)
+
+                if (markdownFiles.length === 0) {
+                    document.getElementById('updates-timeline').innerHTML = `
+                        <div class="no-updates">
+                            <p>No project updates yet.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Load each update file
+                const updates = [];
+                for (const file of markdownFiles) {
+                    try {
+                        const updateResponse = await fetch(file.download_url);
+                        const updateContent = await updateResponse.text();
+                        const update = parseUpdateFile(updateContent, file.name);
+                        updates.push(update);
+                    } catch (error) {
+                        console.error(`Error loading update ${file.name}:`, error);
+                    }
+                }
+
+                // Display updates
+                displayUpdates(updates);
+
+                // Update last updated date in header
+                if (updates.length > 0) {
+                    document.getElementById('project-updated').textContent = formatDate(updates[0].date);
+                }
+
+            } catch (error) {
+                console.error('Error loading updates:', error);
+                document.getElementById('updates-timeline').innerHTML = `
+                    <div class="no-updates">
+                        <p style="color: #f44336;">Error loading project updates.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function parseUpdateFile(content, filename) {
+            const lines = content.split('\n');
+            const update = {
+                title: 'Update',
+                date: new Date().toISOString().split('T')[0],
+                type: 'progress',
+                content: content
+            };
+
+            // Parse front matter if it exists
+            if (lines[0] === '---') {
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i] === '---') {
+                        update.content = lines.slice(i + 1).join('\n');
+                        break;
+                    }
+                    
+                    const [key, ...valueParts] = lines[i].split(':');
+                    const value = valueParts.join(':').trim();
+                    
+                    if (key && value) {
+                        switch (key.trim()) {
+                            case 'title':
+                                update.title = value.replace(/"/g, '');
+                                break;
+                            case 'date':
+                                update.date = value;
+                                break;
+                            case 'type':
+                                update.type = value;
+                                break;
+                        }
+                    }
+                }
+            }
+
+            // Extract date from filename if not in front matter
+            const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch && !update.date) {
+                update.date = dateMatch[1];
+            }
+
+            return update;
+        }
+
+        function displayUpdates(updates) {
+            const timeline = document.getElementById('updates-timeline');
+            
+            timeline.innerHTML = updates.map(update => `
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="update-header">
+                        <h3 class="update-title">${update.title}</h3>
+                        <div class="update-meta">
+                            <span class="update-type type-${update.type}">${formatUpdateType(update.type)}</span>
+                            <span>${formatDate(update.date)}</span>
+                        </div>
+                    </div>
+                    <div class="update-content">
+                        ${marked.parse(update.content)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatStatus(status) {
+            const statusMap = {
+                'planning': 'Planning',
+                'development': 'Development',
+                'testing': 'Testing',
+                'launch': 'Launched',
+                'maintenance': 'Maintenance'
+            };
+            return statusMap[status] || status;
+        }
+
+        function formatUpdateType(type) {
+            const typeMap = {
+                'progress': 'Progress',
+                'feature': 'Feature',
+                'bugfix': 'Bug Fix',
+                'milestone': 'Milestone',
+                'release': 'Release',
+                'planning': 'Planning'
+            };
+            return typeMap[type] || type;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-message').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
