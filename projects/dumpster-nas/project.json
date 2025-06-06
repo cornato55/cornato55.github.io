@@ -1,0 +1,13 @@
+{
+  "title": "Dumpster NAS",
+  "description": "Building a Network Attached Storage PC from an old Dell Optiplex 780 I found in a dumpster.",
+  "status": "development",
+  "created": "2025-06-06",
+  "thumbnail": "https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Dumpster%20NAS",
+  "tech": [],
+  "tags": [],
+  "links": {
+    "github": "",
+    "demo": ""
+  }
+}
