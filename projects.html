@@ -373,76 +373,6 @@
         const GITHUB_USERNAME = 'cornato55';
         const REPO_NAME = 'cornato55.github.io';
 
-        // Sample data for demonstration
-        const sampleProjects = [
-            {
-                slug: 'personal-blog-system',
-                title: 'Personal Blog System',
-                description: 'A custom blog management system built with vanilla JavaScript and GitHub API. Features secure admin panel, markdown support, and responsive design.',
-                status: 'launch',
-                thumbnail: 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Blog+System',
-                tech: ['JavaScript', 'HTML/CSS', 'GitHub API', 'Markdown'],
-                tags: ['web-dev', 'javascript', 'api'],
-                lastUpdate: '2024-03-15',
-                updateCount: 8
-            },
-            {
-                slug: 'python-web-scraper',
-                title: 'E-commerce Price Monitor',
-                description: 'Automated price tracking system for multiple e-commerce platforms. Sends notifications when prices drop below specified thresholds.',
-                status: 'development',
-                thumbnail: 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Price+Monitor',
-                tech: ['Python', 'BeautifulSoup', 'SQLite', 'Selenium'],
-                tags: ['python', 'automation', 'web-scraping'],
-                lastUpdate: '2024-03-10',
-                updateCount: 5
-            },
-            {
-                slug: 'react-task-manager',
-                title: 'Team Task Manager',
-                description: 'Collaborative task management application with real-time updates, file sharing, and project timeline visualization.',
-                status: 'testing',
-                thumbnail: 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Task+Manager',
-                tech: ['React', 'Node.js', 'Socket.io', 'MongoDB'],
-                tags: ['web-dev', 'javascript', 'react', 'full-stack'],
-                lastUpdate: '2024-03-08',
-                updateCount: 12
-            },
-            {
-                slug: 'mobile-expense-tracker',
-                title: 'Mobile Expense Tracker',
-                description: 'Cross-platform mobile app for tracking expenses with automatic receipt scanning and budget analysis.',
-                status: 'planning',
-                thumbnail: 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Expense+Tracker',
-                tech: ['React Native', 'Firebase', 'OCR API', 'Chart.js'],
-                tags: ['mobile', 'javascript', 'firebase'],
-                lastUpdate: '2024-03-01',
-                updateCount: 2
-            },
-            {
-                slug: 'api-documentation-generator',
-                title: 'API Documentation Generator',
-                description: 'Tool that automatically generates beautiful API documentation from code comments and OpenAPI specifications.',
-                status: 'launch',
-                thumbnail: 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=API+Docs',
-                tech: ['Node.js', 'Express', 'OpenAPI', 'Markdown'],
-                tags: ['api', 'automation', 'documentation'],
-                lastUpdate: '2024-02-25',
-                updateCount: 15
-            },
-            {
-                slug: 'ml-image-classifier',
-                title: 'Image Classification System',
-                description: 'Machine learning model for classifying and organizing images with web interface for batch processing.',
-                status: 'development',
-                thumbnail: 'https://via.placeholder.com/400x200/2a2a2a/ffffff?text=ML+Classifier',
-                tech: ['Python', 'TensorFlow', 'Flask', 'OpenCV'],
-                tags: ['python', 'machine-learning', 'api'],
-                lastUpdate: '2024-03-12',
-                updateCount: 7
-            }
-        ];
-
         let allProjects = [];
         let filteredProjects = [];
         let currentFilter = 'all';
@@ -455,20 +385,101 @@
 
         async function loadProjects() {
             try {
-                // In real implementation, this would fetch from GitHub API
-                // For now, using sample data
-                allProjects = sampleProjects;
-                filteredProjects = [...allProjects];
+                // Fetch projects folder from GitHub
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/projects`);
                 
+                if (!response.ok) {
+                    // Projects folder doesn't exist yet
+                    allProjects = [];
+                    filteredProjects = [];
+                    displayProjects();
+                    updateStats();
+                    
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('projects-grid').style.display = 'grid';
+                    return;
+                }
+
+                const folders = await response.json();
+                const projectFolders = folders.filter(item => item.type === 'dir');
+                
+                allProjects = [];
+                
+                // Load each project's metadata
+                for (const folder of projectFolders) {
+                    try {
+                        // Get project.json for metadata
+                        const projectResponse = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/projects/${folder.name}/project.json`);
+                        
+                        if (projectResponse.ok) {
+                            const projectFile = await projectResponse.json();
+                            const projectData = JSON.parse(atob(projectFile.content));
+                            
+                            // Add slug and count updates
+                            projectData.slug = folder.name;
+                            
+                            // Try to count updates
+                            try {
+                                const updatesResponse = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/projects/${folder.name}/updates`);
+                                if (updatesResponse.ok) {
+                                    const updates = await updatesResponse.json();
+                                    projectData.updateCount = updates.filter(item => item.name.endsWith('.md')).length;
+                                    
+                                    // Get last update date
+                                    if (projectData.updateCount > 0) {
+                                        const latestUpdate = updates
+                                            .filter(item => item.name.endsWith('.md'))
+                                            .sort((a, b) => b.name.localeCompare(a.name))[0];
+                                        
+                                        // Extract date from filename (YYYY-MM-DD format)
+                                        const dateMatch = latestUpdate.name.match(/(\d{4}-\d{2}-\d{2})/);
+                                        if (dateMatch) {
+                                            projectData.lastUpdate = dateMatch[1];
+                                        }
+                                    }
+                                } else {
+                                    projectData.updateCount = 0;
+                                }
+                            } catch (error) {
+                                projectData.updateCount = 0;
+                            }
+                            
+                            // Ensure thumbnail uses emoji if not provided
+                            if (!projectData.thumbnail || projectData.thumbnail.includes('placeholder')) {
+                                projectData.thumbnail = `data:image/svg+xml,${encodeURIComponent(`
+                                    <svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
+                                        <rect width="400" height="200" fill="#2a2a2a"/>
+                                        <text x="200" y="100" text-anchor="middle" dominant-baseline="middle" 
+                                              fill="#ffffff" font-family="Arial, sans-serif" font-size="16">
+                                            🚀 ${projectData.title}
+                                        </text>
+                                    </svg>
+                                `)}`;
+                            }
+                            
+                            allProjects.push(projectData);
+                        }
+                    } catch (error) {
+                        console.error(`Error loading project ${folder.name}:`, error);
+                    }
+                }
+                
+                filteredProjects = [...allProjects];
                 displayProjects();
                 updateStats();
                 updateFilterTags();
                 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('projects-grid').style.display = 'grid';
+                
             } catch (error) {
                 console.error('Error loading projects:', error);
-                document.getElementById('loading').innerHTML = 'Error loading projects. Please try again later.';
+                allProjects = [];
+                filteredProjects = [];
+                displayProjects();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('projects-grid').style.display = 'grid';
             }
         }
 
@@ -531,7 +542,7 @@
             grid.innerHTML = filteredProjects.map(project => `
                 <div class="project-card" onclick="openProject('${project.slug}')">
                     <img src="${project.thumbnail}" alt="${project.title}" class="project-thumbnail"
-                         onerror="this.src='https://via.placeholder.com/400x200/2a2a2a/ffffff?text=Project'">
+                         onerror="this.src='data:image/svg+xml,' + encodeURIComponent('<svg width=\\'400\\' height=\\'200\\' xmlns=\\'http://www.w3.org/2000/svg\\'><rect width=\\'400\\' height=\\'200\\' fill=\\'#2a2a2a\\'/><text x=\\'200\\' y=\\'100\\' text-anchor=\\'middle\\' dominant-baseline=\\'middle\\' fill=\\'#ffffff\\' font-family=\\'Arial, sans-serif\\' font-size=\\'16\\'>🚀 Project</text></svg>')">
                     
                     <div class="project-content">
                         <div class="project-header">
